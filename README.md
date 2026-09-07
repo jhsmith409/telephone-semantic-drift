@@ -47,7 +47,7 @@ Build it, and regenerate its figures and tables, with:
 
 ```bash
 uv run python scripts/analyze_paper3.py   # -> results/paper3_figures/, paper3/tables/
-cd paper3 && latexmk -pdf semantic-drift-iterated-paraphrase-chains.tex
+cd paper3 && latexmk -pdf semantic-drift-across-qwen-generations.tex
 ```
 
 `scripts/analyze_paper3.py` reads `results/paper3/<label>/*.json` plus the Paper A
@@ -138,7 +138,7 @@ uv run python scripts/analyze_paper3.py        # -> results/paper3_figures/, pap
 uv run python scripts/analyze_qwen35_paper.py  # -> results/qwen35_paper_figures/, paper2/tables/
 ```
 
-Then recompile the papers with `latexmk -pdf semantic-drift-iterated-paraphrase-chains.tex`.
+Then recompile the papers with `latexmk -pdf <paper>.tex` in `paper/` or `paper3/`.
 
 ## Data
 
