@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite it as below."
+title: "Semantic Drift in Iterated LLM Paraphrase Chains: Model Architecture, Scale, Quantization, Serving Infrastructure, and Prompt Engineering"
+type: software
+authors:
+  - family-names: Smith
+    given-names: James H.
+    affiliation: "Joshua.AI LLC"
+    email: jim@joshua8.ai
+year: 2026
+license: MIT
+repository-code: "https://github.com/jhsmith409/telephone-semantic-drift"

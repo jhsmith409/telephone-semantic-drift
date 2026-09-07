@@ -1,0 +1,12 @@
+{
+  "n_pairs": 21636,
+  "n_errors": 0,
+  "pearson_r": 0.959569,
+  "pearson_p": 0.0,
+  "spearman_rho": 0.857127,
+  "spearman_p": 0.0,
+  "qwen_model": "Qwen/Qwen3-Embedding-0.6B",
+  "bge_model": "bge-m3:latest",
+  "qwen_mean": 0.822974,
+  "bge_mean": 0.88128
+}

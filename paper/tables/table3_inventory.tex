@@ -1,0 +1,41 @@
+\begin{table}[t]
+\centering
+\caption{Complete model inventory, generated from the \texttt{models\_config}
+  block recorded in each experiment's raw data file. Parameter counts and
+  quantization are parsed from the served model tag; ``---'' means the tag
+  does not state that field. ``Temp'' is the temperature ablation of
+  Section~\ref{sec:temperature}.}
+\label{tab:inventory}
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+Served model tag & Params & Quantization & Backend & Experiments \\
+\midrule
+\texttt{qwen3:0.6b-fp16} & 0.6B & fp16 & Ollama & RQ2 \\
+\texttt{qwen3:0.6b-q4\_K\_M} & 0.6B & Q4\_K\_M & Ollama & RQ2 \\
+\texttt{qwen3:1.7b-q8\_0} & 1.7B & Q8\_0 & Ollama & RQ2 \\
+\texttt{qwen3:4b-instruct-2507-fp16} & 4B & fp16 & Ollama & RQ2 \\
+\texttt{qwen3:4b-instruct-2507-q4\_K\_M} & 4B & Q4\_K\_M & Ollama & RQ2 \\
+\texttt{llama3.1:8b} & 8B & --- & Ollama & RQ1, Temp \\
+\texttt{qwen3:8b-q4\_K\_M} & 8B & Q4\_K\_M & Ollama & RQ2, RQ3, Temp \\
+\texttt{ministral-3:14b} & 14B & --- & Ollama & RQ1 \\
+\texttt{devstral-small-2:24b} & 24B & --- & Ollama & RQ1 \\
+\texttt{gemma3:27b-it-qat} & 27B & QAT & Ollama & RQ1, Temp \\
+\texttt{hf.co/mradermacher/medgemma-27b-multimodal-GGUF:latest} & 27B & --- & Ollama & RQ1 \\
+\texttt{cpatonn/Qwen3-VL-30B-A3B-Instruct-AWQ-4bit} & 30B & AWQ 4-bit & vLLM & RQ1, RQ3 \\
+\texttt{nemotron-3-nano:30b} & 30B & --- & Ollama & RQ1 \\
+\texttt{qwen3-coder:30b} & 30B & --- & Ollama & RQ1 \\
+\texttt{qwen3-vl:30b-a3b-instruct-q4\_K\_M} & 30B & Q4\_K\_M & Ollama & RQ1 \\
+\texttt{qwen3:30b-a3b-instruct-2507-q4\_K\_M} & 30B & Q4\_K\_M & Ollama & RQ1, RQ2, Temp \\
+\texttt{qwen3:30b-a3b-instruct-2507-q8\_0} & 30B & Q8\_0 & Ollama & RQ2 \\
+\texttt{qwen3:30b-a3b-thinking-2507-q4\_K\_M} & 30B & Q4\_K\_M & Ollama & RQ1, RQ2 \\
+\texttt{qwen3-next:80b-a3b-instruct-q4\_K\_M} & 80B & Q4\_K\_M & Ollama & RQ1, RQ2 \\
+\texttt{gpt-oss:120b} & 120B & --- & Ollama & RQ1 \\
+\texttt{devstral-2:123b} & 123B & --- & Ollama & RQ1 \\
+\texttt{glm-4.7-flash:Q4\_K\_M} & --- & Q4\_K\_M & Ollama & RQ1 \\
+\texttt{hf.co/bartowski/zai-org\_GLM-4.5-Air-GGUF:latest} & --- & --- & Ollama & RQ1 \\
+\texttt{qwen3-coder-next:Q4\_K\_M} & --- & Q4\_K\_M & Ollama & RQ1 \\
+\bottomrule
+\end{tabular}}
+\end{table}

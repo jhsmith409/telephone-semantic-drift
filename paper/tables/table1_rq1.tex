@@ -1,0 +1,37 @@
+\begin{table}[t]
+\centering
+\caption{Per-model drift statistics (RQ1). Mean final cosine similarity
+  with 95\% bootstrap CI, sorted by mean descending. Five chains were
+  launched per model; $n$ is the number that returned at least one scored
+  iteration and is the number the mean and CI are computed over, while
+  $n_{30}$ is the number that ran the full 30 iterations. Rows with
+  $n<5$ or $n_{30}<n$ are marked $\dagger$: the final similarity for a
+  truncated chain is its last scored iteration, not iteration 30.}
+\label{tab:rq1}
+\small
+\begin{tabular}{lccccl}
+\toprule
+Model & Mean & 95\% CI & $n$ & $n_{30}$ & Tier \\
+\midrule
+Qwen3 30B Instruct & 0.904 & [0.890, 0.913] & 5 & 5 & Stable \\
+Devstral-2 123B & 0.836$^\dagger$ & [0.831, 0.841] & 5 & 4 & Stable \\
+Qwen3-VL 30B AWQ & 0.832 & [0.826, 0.838] & 5 & 5 & Stable \\
+Qwen3-VL 30B GGUF & 0.827 & [0.816, 0.839] & 5 & 5 & Stable \\
+Devstral-Small-2 24B & 0.824 & [0.809, 0.840] & 5 & 5 & Stable \\
+GLM 4.7 Flash & 0.820$^\dagger$ & [0.635, 0.939] & 5 & 0 & Stable \\
+\midrule
+GPT-OSS 120B & 0.783 & [0.756, 0.812] & 5 & 5 & Moderate \\
+Gemma3 27B & 0.768$^\dagger$ & [0.695, 0.841] & 5 & 4 & Moderate \\
+Nemotron-3 Nano 30B & 0.749 & [0.702, 0.780] & 5 & 5 & Moderate \\
+Qwen3 30B Thinking & 0.736 & [0.654, 0.816] & 5 & 5 & Moderate \\
+Qwen3-Coder 30B & 0.682 & [0.643, 0.744] & 5 & 5 & Moderate \\
+Qwen3-Coder-Next & 0.680 & [0.650, 0.709] & 5 & 5 & Moderate \\
+Qwen3-Next 80B & 0.609 & [0.538, 0.694] & 5 & 5 & Moderate \\
+\midrule
+MedGemma 27B & 0.395 & [0.289, 0.469] & 5 & 5 & Catastrophic \\
+Llama 3.1 8B & 0.371$^\dagger$ & [0.216, 0.673] & 3 & 3 & Catastrophic \\
+Ministral-3 14B & 0.344 & [0.255, 0.440] & 5 & 5 & Catastrophic \\
+GLM 4.5 Air & 0.239$^\dagger$ & [0.234, 0.249] & 3 & 3 & Catastrophic \\
+\bottomrule
+\end{tabular}
+\end{table}

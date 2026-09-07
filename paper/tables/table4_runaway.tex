@@ -1,0 +1,76 @@
+\begin{table}[p]
+\centering
+\caption{Runaway-thinking rates. A chain is \emph{runaway} when at
+  least one of its 30 iterations returned an empty assistant message
+  after a full-length generation, i.e.\ the entire token budget was
+  consumed by reasoning; such chains never recover, because the same
+  input is re-fed at the next iteration. Rate = runaway chains /
+  completed chains, with a Wilson 95\% interval. Top block: RQ1 size
+  $\times$ quantization set; per-prompt rates are in Table~\ref{tab:runaway_prompts}.}
+\label{tab:runaway}
+\footnotesize
+\begin{tabular}{llcccc}
+\toprule
+Size & Quant & \multicolumn{2}{c}{Spaghetti} & \multicolumn{2}{c}{Lasagna} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+ & & Rate & 95\% CI & Rate & 95\% CI \\
+\midrule
+0.8B & q8\_0 & 0.80 (4/5) & [0.38, 0.96] & 1.00 (5/5) & [0.57, 1.00] \\
+0.8B & bf16 & 1.00 (5/5) & [0.57, 1.00] & 1.00 (5/5) & [0.57, 1.00] \\
+2B & q4\_K\_M & 0.40 (2/5) & [0.12, 0.77] & 0.20 (1/5) & [0.04, 0.62] \\
+2B & q8\_0 & 0.00 (0/5) & [0.00, 0.43] & 0.80 (4/5) & [0.38, 0.96] \\
+2B & bf16 & 0.40 (2/5) & [0.12, 0.77] & 0.60 (3/5) & [0.23, 0.88] \\
+4B & q4\_K\_M & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+4B & q8\_0 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+4B & bf16 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+9B & q4\_K\_M & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+9B & q8\_0 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+9B & bf16 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+27B & q4\_K\_M & 0.40 (2/5) & [0.12, 0.77] & 0.00 (0/5) & [0.00, 0.43] \\
+27B & q8\_0 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+27B & bf16 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+35B MoE & q4\_K\_M & 0.50 (2/4) & [0.15, 0.85] & 0.00 (0/5) & [0.00, 0.43] \\
+35B MoE & q8\_0 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+35B MoE & bf16 & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+122B & q4\_K\_M & 0.00 (0/5) & [0.00, 0.43] & 0.00 (0/5) & [0.00, 0.43] \\
+\bottomrule
+\end{tabular}
+
+\end{table}
+
+\begin{table}[p]
+\centering
+\caption{Runaway-thinking rate per system prompt (up to 5 chains per
+  cell; rate = runaway chains / completed chains).}
+\label{tab:runaway_prompts}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+System prompt & \multicolumn{2}{c}{35B MoE NVFP4} & \multicolumn{2}{c}{27B GGUF Q4\_K\_M} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Prompt & Spag. & Las. & Spag. & Las. \\
+\midrule
+Baseline - None & 0.80 (4/5) & 0.20 (1/5) & 0.60 (3/5) & 0.00 (0/5) \\
+Minimal Helpful & 0.60 (3/5) & 0.00 (0/5) & 0.20 (1/5) & 0.00 (0/5) \\
+Strong Anti-Meta & 1.00 (5/5) & 1.00 (5/5) & 0.40 (2/5) & 0.40 (2/5) \\
+Ultra-Constrained Fidelity & 1.00 (5/5) & 1.00 (5/5) & 0.80 (4/5) & 0.60 (3/5) \\
+Expert VL Cooking Assistant & 0.60 (3/5) & 0.00 (0/5) & 0.20 (1/5) & 0.20 (1/5) \\
+Deterministic Relay & 0.00 (0/5) & 0.60 (3/5) & 0.40 (2/5) & 0.40 (2/5) \\
+100\% Fidelity & 1.00 (5/5) & 0.20 (1/5) & 0.80 (4/5) & 0.60 (3/5) \\
+Numbered-Only Strict & 1.00 (5/5) & 0.20 (1/5) & 0.80 (4/5) & 0.00 (0/5) \\
+Natural \& Engaging & 1.00 (5/5) & 0.20 (1/5) & 0.40 (2/5) & 0.20 (1/5) \\
+Progressive Refinement & 1.00 (5/5) & 0.00 (0/5) & 0.40 (2/5) & 0.00 (0/5) \\
+Visual Tutorial Style & 0.40 (2/5) & 0.20 (1/5) & 0.00 (0/5) & 0.20 (1/5) \\
+Precise Transmitter & 0.60 (3/5) & 0.00 (0/5) & 0.00 (0/5) & 0.00 (0/5) \\
+Zero Fluff & 1.00 (5/5) & 0.25 (1/4) & 0.20 (1/5) & 0.40 (2/5) \\
+Locked Format & 1.00 (5/5) & 0.60 (3/5) & 0.60 (3/5) & 0.20 (1/5) \\
+Friendly Conversational & 0.20 (1/5) & 0.20 (1/5) & 0.20 (1/5) & 0.00 (0/1) \\
+Multi-Agent Relay & 0.80 (4/5) & 0.20 (1/5) & 0.00 (0/5) & 0.00 (0/3) \\
+Think-Step-by-Step & 1.00 (5/5) & 0.00 (0/5) & 0.40 (2/5) & 0.00 (0/2) \\
+Multimodal Visual Focus & 0.80 (4/5) & 0.40 (2/5) & 0.00 (0/5) & 0.00 (0/3) \\
+No Meta Ever & 0.80 (4/5) & 0.40 (2/5) & 0.60 (3/5) & 0.00 (0/2) \\
+Balanced Clarity & 1.00 (5/5) & 0.40 (2/5) & 0.20 (1/5) & --- \\
+\bottomrule
+\end{tabular}}
+\end{table}

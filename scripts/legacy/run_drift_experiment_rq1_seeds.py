@@ -1,0 +1,372 @@
+#!/usr/bin/env python3
+# Copyright (c) 2026 James H. Smith. MIT License.
+"""Experiment A: Part 1 replication with seeds — 17 models × 5 seeds × 30 iterations.
+
+Replicates the original 17-model drift experiment with 5 random seeds per model
+for statistical robustness. Same spaghetti prompt, T=0.7, paraphrase style.
+
+Uses ThreadPoolExecutor(max_workers=4) for parallelism.
+Resumable: skips condition keys already present in the data file.
+
+Usage:
+    nohup uv run python -u scripts/run_drift_experiment_rq1_seeds.py \
+        > results/drift_experiment_rq1_seeds/run.log 2>&1 &
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+from pathlib import Path
+
+import httpx
+
+BATCH_API_URL = "http://localhost:5001"
+ITERATIONS = 30
+PROMPT_STYLE = "paraphrase"
+TEMPERATURE = 0.7
+SEEDS = [42, 137, 256, 512, 1024]
+
+INITIAL_PROMPT = (
+    "Step 1: Boil water. Step 2: Add pasta for 8 minutes. "
+    "Step 3: Drain and serve with sauce."
+)
+
+# 17 models from the original Part 1 experiment (excluding glm-ocr, bible-expert-12b,
+# qwen3-vl:30b ollama-alt). All on <GPU-HOST-D>.
+MODELS = {
+    "gemma3:27b": {
+        "model": "gemma3:27b-it-qat",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3-next:80b": {
+        "model": "qwen3-next:80b-a3b-instruct-q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "llama3.1:8b": {
+        "model": "llama3.1:8b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "gpt-oss:120b": {
+        "model": "gpt-oss:120b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "nemotron-3-nano:30b": {
+        "model": "nemotron-3-nano:30b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3-coder-next": {
+        "model": "qwen3-coder-next:Q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "glm-4.7-flash": {
+        "model": "glm-4.7-flash:Q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "devstral-2:123b": {
+        "model": "devstral-2:123b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3-vl:30b-gguf": {
+        "model": "qwen3-vl:30b-a3b-instruct-q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "medgemma-27b": {
+        "model": "hf.co/mradermacher/medgemma-27b-multimodal-GGUF:latest",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3-coder:30b": {
+        "model": "qwen3-coder:30b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "ministral-3:14b": {
+        "model": "ministral-3:14b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3:30b-thinking": {
+        "model": "qwen3:30b-a3b-thinking-2507-q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "glm-4.5-air": {
+        "model": "hf.co/bartowski/zai-org_GLM-4.5-Air-GGUF:latest",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3:30b-instruct": {
+        "model": "qwen3:30b-a3b-instruct-2507-q4_K_M",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "devstral-small-2:24b": {
+        "model": "devstral-small-2:24b",
+        "service_type": "ollama",
+        "host": "<GPU-HOST-D>",
+        "port": 11434,
+    },
+    "qwen3-vl:30b-awq": {
+        "model": "cpatonn/Qwen3-VL-30B-A3B-Instruct-AWQ-4bit",
+        "service_type": "openai",
+        "host": "<GPU-HOST-D>",
+        "port": 8005,
+    },
+}
+
+OUT_DIR = Path("results/drift_experiment_rq1_seeds")
+
+
+def get_similarity(client: httpx.Client, text_a: str, text_b: str) -> float | None:
+    """Compute cosine similarity between two texts via embedding endpoint."""
+    import os
+
+    host = os.environ.get("EMBEDDING_HOST", "<GPU-HOST-A>")
+    port = os.environ.get("EMBEDDING_PORT", "8002")
+    model = os.environ.get("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-0.6B")
+
+    try:
+        resp = client.post(
+            f"http://{host}:{port}/v1/embeddings",
+            json={"input": [text_a, text_b], "model": model},
+            timeout=30.0,
+        )
+        data = resp.json()
+        vec_a = data["data"][0]["embedding"]
+        vec_b = data["data"][1]["embedding"]
+
+        dot = sum(x * y for x, y in zip(vec_a, vec_b))
+        norm_a = math.sqrt(sum(x * x for x in vec_a))
+        norm_b = math.sqrt(sum(x * x for x in vec_b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
+    except Exception as e:
+        print(f"  [embedding error: {e}]")
+        return None
+
+
+def run_single_chain(
+    condition_key: str,
+    model_info: dict,
+    seed: int,
+) -> tuple[str, list[dict]]:
+    """Run 30 iterations for one model+seed, returning (key, results)."""
+    print(f"\n{'='*60}")
+    print(f"Condition: {condition_key}")
+    print(f"{'='*60}")
+
+    results = []
+    current_message = INITIAL_PROMPT
+
+    with httpx.Client() as client:
+        for i in range(1, ITERATIONS + 1):
+            t0 = time.time()
+            try:
+                resp = client.post(
+                    f"{BATCH_API_URL}/api/run",
+                    json={
+                        "message": current_message,
+                        "prompt_style": PROMPT_STYLE,
+                        "temperature": TEMPERATURE,
+                        "seed": seed,
+                        **model_info,
+                    },
+                    timeout=300.0,
+                )
+                api_result = resp.json()
+            except Exception as exc:
+                api_result = {"status": "error", "error": str(exc)}
+
+            elapsed = time.time() - t0
+
+            if api_result.get("status") != "success":
+                error = api_result.get("error", "unknown")
+                print(f"  [{condition_key}] iter {i:2d}/{ITERATIONS}: FAIL ({error})")
+                results.append({
+                    "iteration": i,
+                    "status": "error",
+                    "error": error,
+                    "cosine_similarity": None,
+                })
+                break
+
+            output = api_result["output_message"]
+            sim = get_similarity(client, INITIAL_PROMPT, output)
+
+            sim_str = f"{sim:.4f}" if sim is not None else "N/A"
+            print(f"  [{condition_key}] iter {i:2d}/{ITERATIONS}: sim={sim_str}  ({elapsed:.1f}s)")
+
+            results.append({
+                "iteration": i,
+                "status": "success",
+                "input_message": current_message,
+                "output_message": output,
+                "cosine_similarity": sim,
+                "elapsed_seconds": round(elapsed, 2),
+            })
+
+            current_message = output
+
+    return condition_key, results
+
+
+def build_condition_matrix() -> list[tuple[str, dict, int]]:
+    """Build the condition matrix: 17 models × 5 seeds = 85 runs.
+
+    Returns list of (condition_key, model_info, seed).
+    """
+    conditions = []
+    for label, model_info in MODELS.items():
+        for seed in SEEDS:
+            key = f"{label}_s{seed}"
+            conditions.append((key, model_info, seed))
+    return conditions
+
+
+def main() -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    data_path = OUT_DIR / "drift_data.json"
+
+    # Wait for batch API
+    print(f"Waiting for batch API at {BATCH_API_URL}...")
+    with httpx.Client() as client:
+        for attempt in range(30):
+            try:
+                r = client.get(f"{BATCH_API_URL}/api/services", timeout=5.0)
+                if r.status_code == 200:
+                    print("Batch API is ready.\n")
+                    break
+            except httpx.ConnectError:
+                pass
+            time.sleep(1)
+        else:
+            print("ERROR: Batch API not reachable after 30s", file=sys.stderr)
+            sys.exit(1)
+
+    # Load existing data for resumability
+    all_data: dict[str, list[dict]] = {}
+    if data_path.exists():
+        existing = json.loads(data_path.read_text())
+        all_data = existing.get("models", {})
+        print(f"Loaded {len(all_data)} existing runs from {data_path}")
+
+    # Build condition matrix
+    conditions = build_condition_matrix()
+    total = len(conditions)
+
+    # Filter out already-completed conditions
+    remaining = [(k, mi, s) for k, mi, s in conditions if k not in all_data]
+    print(f"Total conditions: {total}")
+    print(f"Already completed: {total - len(remaining)}")
+    print(f"Remaining: {len(remaining)}")
+    print(f"Models: {len(MODELS)}")
+    print(f"Seeds: {SEEDS}")
+
+    def _save_json() -> None:
+        save_data = {
+            "initial_prompt": INITIAL_PROMPT,
+            "iterations": ITERATIONS,
+            "prompt_style": PROMPT_STYLE,
+            "temperature": TEMPERATURE,
+            "seeds": SEEDS,
+            "models_config": {label: info for label, info in MODELS.items()},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "models": all_data,
+        }
+        data_path.write_text(json.dumps(save_data, indent=2))
+
+    if not remaining:
+        print("\nAll conditions already completed.")
+    else:
+        data_lock = threading.Lock()
+        completed = [0]
+
+        def _run_and_save(args: tuple) -> str:
+            key, mi, seed = args
+            cond_key, results = run_single_chain(key, mi, seed)
+
+            with data_lock:
+                all_data[cond_key] = results
+                completed[0] += 1
+                _save_json()
+                print(f"\n  -> Saved {cond_key} ({completed[0]}/{len(remaining)} done)")
+
+            return cond_key
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(_run_and_save, args): args[0] for args in remaining}
+            for future in as_completed(futures):
+                key = futures[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f"\nERROR: {key} failed: {exc}", file=sys.stderr)
+
+    # Final save
+    _save_json()
+    print(f"\nData saved: {data_path}")
+
+    # Print summary
+    print(f"\n{'='*70}")
+    print(f"SUMMARY — Mean Final Similarity by Model (5 seeds)")
+    print(f"{'='*70}")
+    print(f"{'Model':<30} {'Mean':>8} {'Std':>8} {'Min':>8} {'Max':>8}")
+    print(f"{'-'*30} {'-'*8} {'-'*8} {'-'*8} {'-'*8}")
+
+    rows = []
+    for label in MODELS:
+        finals = []
+        for seed in SEEDS:
+            key = f"{label}_s{seed}"
+            if key not in all_data:
+                continue
+            iters = all_data[key]
+            sims = [r["cosine_similarity"] for r in iters if r.get("cosine_similarity") is not None]
+            if sims:
+                finals.append(sims[-1])
+
+        if finals:
+            mean = sum(finals) / len(finals)
+            std = (sum((x - mean) ** 2 for x in finals) / len(finals)) ** 0.5
+            rows.append((label, mean, std, min(finals), max(finals)))
+
+    rows.sort(key=lambda x: x[1], reverse=True)
+    for label, mean, std, mn, mx in rows:
+        print(f"  {label:<28} {mean:>8.4f} {std:>8.4f} {mn:>8.4f} {mx:>8.4f}")
+
+    print(f"\nExperiment complete! {len(all_data)} total runs.")
+
+
+if __name__ == "__main__":
+    main()

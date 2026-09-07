@@ -1,0 +1,58 @@
+\begin{table}[t]
+\centering
+\caption{RQ4 summary (lasagna recipe), computed over \emph{clean}
+  chains only. Spread is the difference between the best- and
+  worst-performing system prompt for that configuration;
+  $n_{\min}$ is the smallest number of clean chains behind any
+  prompt cell; ``RA'' is the configuration-wide runaway-thinking rate
+  over all 20 prompts $\times$ 5 seeds.}
+\label{tab:rq4_spread}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccllcc}
+\toprule
+Configuration & Mean & Spread & Best prompt & Worst prompt & $n_{\min}$ & RA \\
+\midrule
+9B (GGUF Q4) & 0.822 & 0.332 & 100\% Fidelity (0.956) & Multimodal Visual Focus (0.624) & 1 & 0.05 (5/97) \\
+27B (GGUF Q4) & 0.868 & 0.380 & Natural \& Engaging (0.965) & Multimodal Visual Focus (0.585) & 1 & 0.20 (16/81) \\
+35B AWQ & 0.742 & 0.743 & Precise Transmitter (0.917) & Strong Anti-Meta (0.175) & 5 & 0.00 (0/100) \\
+35B NVFP4 & 0.854 & 0.294 & Balanced Clarity (0.956) & Multimodal Visual Focus (0.663) & 2 & 0.30 (30/99) \\
+35B GPTQ & 0.887 & 0.348 & 100\% Fidelity (0.981) & Visual Tutorial Style (0.633) & 4 & 0.00 (0/99) \\
+9B AWQ & 0.899 & 0.300 & Precise Transmitter (0.972) & Visual Tutorial Style (0.672) & 4 & 0.00 (0/99) \\
+Nemotron 30B (control) & 0.803 & 0.556 & 100\% Fidelity (0.938) & Baseline - None (0.381) & 5 & 0.00 (0/100) \\
+\bottomrule
+\end{tabular}}
+
+\vspace{1em}
+
+\caption*{Pairwise Spearman $\rho$ between per-prompt mean rankings
+  (20 prompts, lasagna), with 95\% bootstrap CIs ($B=10{,}000$).}
+\small
+\begin{tabular}{llcc}
+\toprule
+Configuration A & Configuration B & $\rho$ & 95\% CI \\
+\midrule
+9B (GGUF Q4) & 27B (GGUF Q4) & 0.486 & [-0.075, 0.897] \\
+9B (GGUF Q4) & 35B AWQ & 0.779 & [0.461, 0.918] \\
+9B (GGUF Q4) & 35B NVFP4 & 0.798 & [0.444, 0.944] \\
+9B (GGUF Q4) & 35B GPTQ & 0.549 & [0.070, 0.825] \\
+9B (GGUF Q4) & 9B AWQ & 0.633 & [0.209, 0.857] \\
+9B (GGUF Q4) & Nemotron 30B (control) & 0.081 & [-0.488, 0.573] \\
+27B (GGUF Q4) & 35B AWQ & 0.746 & [0.420, 0.897] \\
+27B (GGUF Q4) & 35B NVFP4 & 0.409 & [-0.171, 0.819] \\
+27B (GGUF Q4) & 35B GPTQ & 0.209 & [-0.326, 0.707] \\
+27B (GGUF Q4) & 9B AWQ & 0.312 & [-0.202, 0.714] \\
+27B (GGUF Q4) & Nemotron 30B (control) & -0.333 & [-0.781, 0.204] \\
+35B AWQ & 35B NVFP4 & 0.556 & [0.123, 0.800] \\
+35B AWQ & 35B GPTQ & 0.259 & [-0.200, 0.644] \\
+35B AWQ & 9B AWQ & 0.480 & [0.012, 0.794] \\
+35B AWQ & Nemotron 30B (control) & -0.093 & [-0.560, 0.390] \\
+35B NVFP4 & 35B GPTQ & 0.611 & [0.180, 0.855] \\
+35B NVFP4 & 9B AWQ & 0.523 & [0.080, 0.785] \\
+35B NVFP4 & Nemotron 30B (control) & 0.162 & [-0.369, 0.618] \\
+35B GPTQ & 9B AWQ & 0.829 & [0.542, 0.937] \\
+35B GPTQ & Nemotron 30B (control) & 0.496 & [-0.060, 0.839] \\
+9B AWQ & Nemotron 30B (control) & 0.441 & [-0.071, 0.784] \\
+\bottomrule
+\end{tabular}
+\end{table}
