@@ -606,7 +606,9 @@ the model's reasoning process no natural stopping point.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth,height=0.31\textheight,keepaspectratio]{../results/qwen35_paper_figures/fig3_quant_heatmap.png}
-\caption{Mean final similarity by model size and quantization level.
+\caption{Mean final similarity by model size and quantization level over
+  all completed chains, including runaway chains at the empty-output floor;
+  Table~\ref{tab:size_quant} gives the clean-chain means and runaway rates.
   Left: spaghetti recipe. Right: lasagna recipe.
   Note that 0.8B Q4\_K\_M does not exist for Qwen3.5.}
 \label{fig:q35_heatmap}

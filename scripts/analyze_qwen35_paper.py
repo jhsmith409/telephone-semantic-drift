@@ -1092,7 +1092,7 @@ def plot_fig2_boxplot(spag_stats: dict, las_stats: dict) -> None:
 
 def plot_fig3_quant_heatmap(spag_stats: dict, las_stats: dict) -> None:
     """Fig 3: Size x Quant heatmap, side by side for both recipes."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
 
     for ax, stats, title in [(ax1, spag_stats, "Spaghetti"),
                               (ax2, las_stats, "Lasagna")]:
@@ -1129,9 +1129,9 @@ def plot_fig3_quant_heatmap(spag_stats: dict, las_stats: dict) -> None:
                     ax.text(j, i, "\u2014", ha="center", va="center",
                             fontsize=10, color="#cccccc")
 
-    fig.colorbar(im, ax=[ax1, ax2], shrink=0.8, label="Mean Final Cosine Similarity")
+    fig.colorbar(im, ax=[ax1, ax2], shrink=0.8, pad=0.02, location="right",
+                 label="Mean Final Cosine Similarity")
     fig.suptitle("Qwen3.5: Size x Quantization Heatmap", fontsize=13)
-    fig.tight_layout()
     save_figure(fig, "fig3_quant_heatmap.png")
 
 
