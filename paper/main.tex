@@ -66,8 +66,9 @@ failures in the weakest;
 configuration is reliable, and above which the ordering by size is irregular;
 (3)~a discrete \emph{runaway-thinking} failure mode in which a model with
 reasoning enabled spends its entire 16{,}384-token budget inside the thinking
-block and returns nothing---absent on vLLM but affecting 15--54\% of chains on
-the Ollama and SGLang stacks, concentrated in 4-bit builds, small models, the
+block and returns nothing---absent wherever reasoning was disabled but
+affecting 15--54\% of chains on the two stacks that ran Qwen3.5 with its
+default reasoning on, concentrated in 4-bit builds, small models, the
 short stimulus, and constraining system prompts;
 (4)~4-bit quantization \emph{formats} of identical weights that differ by up
 to 0.26 on the short stimulus, while precision level is non-monotonic
@@ -635,11 +636,23 @@ system prompts, so this section concentrates on the empty-completion mode.
 
 \paragraph{Rates.}
 Across the 1{,}969 completed within-family chains, 265 (13.5\%, Wilson 95\%
-CI [12.0\%, 15.0\%]) are runaway. The rate is governed first by the serving
-stack: it is zero across all 993 chains served by vLLM (35B AWQ, 35B GPTQ-Int4,
-9B AWQ and the Nemotron NVFP4 control), and 15--54\% on the Ollama GGUF and
-SGLang NVFP4 arms. Within the Ollama sweep it then
-follows size and precision (Table~\ref{tab:runaway}): both 0.8B builds fail
+CI [12.0\%, 15.0\%]) are runaway. The first-order determinant is whether
+reasoning was enabled at all. The four vLLM deployments (35B AWQ, 35B
+GPTQ-Int4, 9B AWQ and the Nemotron NVFP4 control) were production chat
+servers launched with thinking disabled in the chat template, and across
+their 993 chains the rate is zero; the Ollama and SGLang deployments ran
+Qwen3.5 with its default thinking enabled, and their rates are 15--54\%. The
+contrast is therefore between reasoning on and off, not between serving
+stacks as such: the companion paper shows that a vLLM deployment of the
+following generation with thinking switched on does hit the budget, at a
+lower rate. A second, uncontrolled difference is the sampler. Our requests
+set only temperature and seed; top-$p$, top-$k$ and repetition or presence
+penalties came from each server's defaults, which differ across the three
+stacks, and the Qwen model cards recommend top-$k$ 20, top-$p$ 0.95 and a
+presence penalty of 0--2 in thinking mode precisely to prevent endless
+repetition. The rates below should be read as properties of reasoning-enabled
+Qwen3.5 under each stack's default sampler. Within the Ollama sweep the rate
+then follows size and precision (Table~\ref{tab:runaway}): both 0.8B builds fail
 in 80--100\% of chains on either recipe; the 2B builds fail in 20--80\%; and
 above 4B only the Q4\_K\_M builds fail, at 40\% (27B) and 50\% (35B MoE) on
 spaghetti and never on lasagna. The 35B NVFP4 build on SGLang fails in 80\%
@@ -1187,14 +1200,16 @@ LLM system designers:
         recipes and all chains use one paraphrase instruction; other
         domains and other iterated tasks (summarization, translation) may
         drift differently.
-  \item \textbf{Serving stacks.} Results cover Ollama, vLLM and SGLang on
-        one lab's hardware. In three of the four quantization-format arms the
-        format and the backend covary, so the format effect is a
-        format-and-stack effect. Runaway thinking was observed only on the
-        two stacks that ran Qwen3.5 with reasoning enabled and a
-        16{,}384-token budget; a different budget or a stack that disables
-        reasoning would change its rate, though not, we expect, its
-        existence.
+  \item \textbf{Serving stacks and samplers.} Results cover Ollama, vLLM
+        and SGLang on one lab's hardware. In three of the four
+        quantization-format arms the format and the backend covary, so the
+        format effect is a format-and-stack effect. The vLLM arms were
+        launched with thinking disabled and the Ollama and SGLang arms with
+        it enabled, so the absence of runaway thinking on vLLM is a
+        reasoning-off result, not a stack result. Sampling parameters other
+        than temperature (top-$p$, top-$k$, penalties) were left at each
+        server's defaults and differ across stacks; they plausibly modulate
+        the runaway rate and were not controlled.
   \item \textbf{Single metric.} Cosine similarity captures one dimension of
         drift. \citet{belem2026certainty} show that repeated rewriting shifts
         expressed certainty while leaving surface content intact, a change
