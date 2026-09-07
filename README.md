@@ -160,4 +160,15 @@ reachable host; substitute your own endpoints.
 
 MIT — see [LICENSE](LICENSE).
 
+## Use of AI assistance
+
+The majority of the code in this repository (experiment runners, analysis scripts,
+and the web application) was written by large language models — Claude Opus and
+Claude Sonnet (Anthropic) and Grok (xAI) — working under the author's direction,
+with the author specifying the experiments, reviewing the code and its outputs,
+and correcting errors. Claude Fable and Claude Opus, Grok, and Gemini (Google)
+were used to aid the writing and layout of the two manuscripts. The experimental
+design, the interpretation of results, and all claims in the papers are the
+author's responsibility.
+
 Copyright (c) 2026 James H. Smith
