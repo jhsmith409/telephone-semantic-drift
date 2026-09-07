@@ -504,9 +504,13 @@ spaghetti, where the default rate is zero, stayed at zero. Runaway thinking
 is therefore not a property of a serving stack but of sampling the reasoning
 block without a repetition control, which is exactly the setting the Qwen
 model cards warn against; a presence penalty removes the failure without
-changing what the model produces when it does answer. The stack differences
-Paper~A reported are best read as differences in default samplers between
-deployments that had reasoning enabled.
+changing what the model produces when it does answer. This also resolves
+the stack ordering Paper~A reported: the Ollama library's Qwen3.5 tags ship
+a parameter layer with exactly this sampler (top-$k$ 20, top-$p$ 0.95,
+presence penalty 1.5), so Paper~A's Ollama arm ran penalised and its SGLang
+arm did not, and the Ollama arm's lower but non-zero rate (15--27\% against
+36--54\%) shows that on Qwen3.5 the penalty mitigates the failure where on
+Qwen3.6 it removes it.
 
 \subsection{Serving format, stack, and speculative decoding}
 \label{sec:format}

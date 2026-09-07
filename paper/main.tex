@@ -650,13 +650,20 @@ set only temperature and seed; top-$p$, top-$k$ and repetition or presence
 penalties came from each server's defaults, which differ across the three
 stacks, and the Qwen model cards recommend top-$k$ 20, top-$p$ 0.95 and a
 presence penalty of 0--2 in thinking mode precisely to prevent endless
-repetition. The rates below should be read as properties of reasoning-enabled
-Qwen3.5 under each stack's default sampler. The companion paper tests the
-sampler directly on the following generation and finds that adding the
-vendor-recommended presence penalty of 1.5 eliminates the failure (0 of 15
-chains against 8 of 15) while removing top-$k$ and top-$p$ does not, so the
-stack differences here are most plausibly differences in default sampling
-of the reasoning block. Within the Ollama sweep the rate
+repetition. The two reasoning-enabled stacks differed in exactly this respect. The
+Ollama library's Qwen3.5 tags carry a parameter layer that sets
+top-$k$ 20, top-$p$ 0.95 and a presence penalty of 1.5 (the same layer for
+every size; our requests overrode only the temperature), so the Ollama arm
+ran with the vendor's thinking-mode sampler. The SGLang deployment applied
+no presence penalty. The companion paper tests the sampler directly on the
+following generation and finds that the presence penalty eliminates the
+failure there (0 of 15 chains against 8 of 15) while removing top-$k$ and
+top-$p$ changes nothing. The ordering of the two arms here---15--27\%
+runaway on Ollama against 36--54\% on SGLang for the same weights
+class---is what that result predicts, with the further observation that on
+Qwen3.5 the penalty mitigates the failure but does not remove it. The rates
+below should therefore be read as properties of reasoning-enabled Qwen3.5
+under a penalised (Ollama) or unpenalised (SGLang) sampler. Within the Ollama sweep the rate
 then follows size and precision (Table~\ref{tab:runaway}): both 0.8B builds fail
 in 80--100\% of chains on either recipe; the 2B builds fail in 20--80\%; and
 above 4B only the Q4\_K\_M builds fail, at 40\% (27B) and 50\% (35B MoE) on
@@ -1212,9 +1219,11 @@ LLM system designers:
         launched with thinking disabled and the Ollama and SGLang arms with
         it enabled, so the absence of runaway thinking on vLLM is a
         reasoning-off result, not a stack result. Sampling parameters other
-        than temperature (top-$p$, top-$k$, penalties) were left at each
-        server's defaults and differ across stacks; they plausibly modulate
-        the runaway rate and were not controlled.
+        than temperature were left at each server's defaults: Ollama applied
+        the library tags' presence penalty of 1.5, SGLang applied none. The
+        companion paper shows that this penalty is the parameter that
+        governs runaway, so the Ollama--SGLang gap is a sampler effect and
+        was not controlled by design.
   \item \textbf{Single metric.} Cosine similarity captures one dimension of
         drift. \citet{belem2026certainty} show that repeated rewriting shifts
         expressed certainty while leaving surface content intact, a change
