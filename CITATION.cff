@@ -5,6 +5,7 @@ type: software
 authors:
   - family-names: Smith
     given-names: James H.
+    orcid: "https://orcid.org/0009-0008-0263-1515"
     affiliation: "Joshua.AI LLC"
     email: jim@joshua8.ai
 year: 2026
@@ -16,6 +17,7 @@ references:
     authors:
       - family-names: Smith
         given-names: James H.
+        orcid: "https://orcid.org/0009-0008-0263-1515"
         affiliation: "Joshua.AI LLC"
     year: 2026
     notes: "Paper B; source in paper3/, data in release v1.1-data"
