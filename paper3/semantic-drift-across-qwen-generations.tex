@@ -46,33 +46,38 @@ knowledge domains, and whether embedding similarity measures the loss of
 information that practitioners care about. Across 2{,}717 completed chains
 and 87{,}110 model calls on eight configurations served by vLLM, SGLang and
 llama.cpp, we find:
-(1)~seeds do not pin chains on any of these stacks---identical requests
+(1)~cosine similarity to the original, the drift measure used by this line
+of work, does not track the information a document carries: across sixteen
+domains with ten checkable facts each it is only weakly related to the
+survival of those facts ($\rho=0.32$), and on construction statements of
+work it is negatively related ($\rho=-0.42$), because outputs inflate two-
+to seven-fold and reframe as memos while every number survives; dates are
+the most fragile fact type (35\% survival, on six date anchors) and
+identifiers the most robust (81\%);
+(2)~seeds do not pin chains on any of these stacks---identical requests
 diverge at the first token even at temperature~0 and even with one request in
 flight---so drift must be reported over samples, and we do so at 15 to 30
 chains per condition;
-(2)~thinking mode is a large effect whose sign depends on the model, costing
+(3)~thinking mode is a large effect whose sign depends on the model, costing
 Qwen3.6-35B up to 0.16 in final similarity and never reaching a fixed point
 over 100 iterations, while lifting Qwen3.8-27B from 0.58 to 0.88 on the short
 stimulus; no system prompt rescues the model it hurts, and it retains the
-runaway-thinking failure of the previous generation at a low rate---a
-failure that a presence penalty of 1.5 in the sampler eliminates entirely
+runaway-thinking failure of the previous generation at a low rate, which a
+presence penalty of 1.5 in the sampler removed in the one condition tested
 without changing the output otherwise;
-(3)~multi-token-prediction speculative decoding leaves drift unchanged, and
-temperature~0 narrows the spread without changing the mean;
-(4)~system-prompt rankings replicate across hosts ($\rho=0.95$--$0.98$) and
-transfer across models within a generation ($\rho=0.70$--$0.90$), reversing
-the non-transfer reported for older models, with one domain-neutral fidelity
-prompt raising every one of sixteen domains to 0.88--0.98;
-(5)~most chains lock byte-for-byte within ten iterations, so ``drift'' on
-these models is largely where a copying attractor caught the chain; and
-(6)~across sixteen domains with ten checkable facts each, cosine similarity
-is only weakly related to the survival of those facts ($\rho=0.32$), and on
-construction statements of work it is negatively related ($\rho=-0.42$):
-outputs inflate two- to seven-fold and reframe as memos while every number
-survives. Dates are the most fragile fact type (35\% survival), identifiers
-the most robust (81\%). We conclude that similarity-based drift scores
-measure genre and length change far more than information loss, and we
-release the full chain texts so that other metrics can be applied.
+(4)~multi-token-prediction speculative decoding shows no mean shift we can
+detect at 15 samples, and temperature~0 narrows the spread without moving
+the mean;
+(5)~system-prompt rankings replicate across hosts ($\rho=0.95$--$0.98$) and
+transfer across models within this generation ($\rho=0.70$--$0.90$), where
+the earlier work found no transfer across families or sizes, and one
+domain-neutral fidelity prompt raises every one of sixteen domains to
+0.88--0.98; and
+(6)~most chains lock byte-for-byte within ten iterations, so ``drift'' on
+these models is largely where a copying attractor caught the chain.
+We conclude that similarity-based drift scores measure genre and length
+change far more than information loss, and we release the full chain texts
+so that other metrics can be applied.
 \end{abstract}
 
 \section{Introduction}
@@ -116,16 +121,19 @@ Our contributions are:
         treats every chain as an independent sample.
   \item A cross-generation comparison at matched size from Qwen3 through
         Qwen3.5, 3.6 and 3.8, showing that drift on the short stimulus has
-        \emph{worsened} with each generation as models grew more verbose,
-        while drift on the long stimulus improved (Section~\ref{sec:baseline}).
+        worsened after Qwen3.5 as models grew more verbose, while drift on
+        the long stimulus improved, with the caveat that the size matching is
+        approximate and the older anchors rest on few chains
+        (Section~\ref{sec:baseline}).
   \item The first controlled measurement of thinking mode in iterated
         generation: a model-dependent sign, no fixed point at 100
         iterations, no rescue by prompting, and a residual runaway rate
         (Section~\ref{sec:thinking}).
-  \item Null results for speculative decoding and for greedy decoding as
-        drift controls, and a replication of the format-and-stack effect on
-        two new generations (Sections~\ref{sec:format} and
-        \ref{sec:temperature}).
+  \item No detectable mean effect of speculative decoding or of greedy
+        decoding on drift at 15 samples, greedy decoding acting only on the
+        spread, and a re-test of the format-and-stack contrast on two new
+        generations that reproduces its magnitude on one model and not its
+        direction (Sections~\ref{sec:format} and \ref{sec:temperature}).
   \item Evidence that system-prompt rankings are a stable, transferable
         property within a generation, and that a single fidelity prompt
         works in every domain tested (Sections~\ref{sec:sysprompt} and
@@ -163,10 +171,13 @@ scheduling rather than from sampling~\citep{he2025nondeterminism}, with
 batch-invariant kernels~\citep{zhang2025deterministic,zhao2026corun}
 proposed as remedies; Section~\ref{sec:seeds} measures the consequence for
 iterated generation. Speculative decoding~\citep{leviathan2023speculative,
-chen2023speculative} and its multi-token-prediction
-variant~\citep{gloeckle2024multitoken,deepseek2024v3} are
-distribution-preserving in principle; Section~\ref{sec:format} tests
-whether that holds for drift in practice. Instruction-following
+chen2023speculative} is distribution-preserving in principle, a property of
+the algorithm rather than of any serving stack's numerics; multi-token
+prediction heads, introduced as a training objective
+\citep{gloeckle2024multitoken} and used by DeepSeek-V3 as a self-speculative
+draft~\citep{deepseek2024v3}, are what the llama.cpp MTP arm exercises.
+Section~\ref{sec:format} tests empirically whether drift is unchanged on
+that stack. Instruction-following
 capacity~\citep{jaroslawicz2025ifscale} bears on why thinking mode and
 constraining prompts interact as they do.
 
@@ -242,7 +253,7 @@ Qwen3.8-Flash-Next & MoE 125B, 6B active & NVFP4 & SGLang & yes \\
 \label{sec:stimuli}
 
 Three stimulus sets are used. The two recipes of Paper~A (3-step
-\emph{spaghetti}, 21-step \emph{lasagna}, reproduced in
+\emph{spaghetti}, long \emph{lasagna} of nominally 21 steps, reproduced in
 Appendix~\ref{app:prompts}) anchor every comparison with the earlier data.
 Two construction statements of work in the format that a specification
 ingestion product emits for subcontractor bidding---a 95-word summary with
@@ -320,7 +331,7 @@ pairs.
 \label{sec:baseline}
 
 Figure~\ref{fig:baseline} and Table~\ref{tab:paper3-baseline} give the
-baseline. On the 21-step lasagna recipe every configuration finishes between
+baseline. On the long lasagna recipe every configuration finishes between
 0.85 and 0.91, a narrow band with Qwen3.8-27B NVFP4 (0.905) and the MTP
 build (0.897) at the top and Qwen3.6-35B GGUF (0.847) at the bottom. On the
 3-step spaghetti recipe the configurations spread from 0.53 to 0.74 and
@@ -526,7 +537,9 @@ Qwen3.6-35B the NVFP4 build on vLLM is better on both recipes (0.736 vs.\
 Qwen3.8-27B the two builds are indistinguishable on spaghetti (0.582 vs.\
 0.594, $p=0.93$) and the NVFP4 build is slightly better on lasagna (0.905
 vs.\ 0.878, $p=0.016$). The direction of Paper~A's effect, which favoured
-GGUF, is not reproduced; its magnitude on one of the two models is.
+GGUF, is not reproduced; a gap of comparable magnitude appears on one of the
+two models, in the opposite direction. This is a re-test under a changed
+stack, not a replication.
 
 \begin{figure}[htbp]
 \centering
@@ -538,16 +551,21 @@ GGUF, is not reproduced; its magnitude on one of the two models is.
 
 \input{tables/table5_format_stack}
 
-\paragraph{Speculative decoding is a null.}
+\paragraph{Speculative decoding: no detectable effect.}
 The Qwen3.8-27B GGUF file served with and without its multi-token-prediction
 draft head is the cleanest infrastructure comparison in either paper: same
-bytes, same server, one flag. Figure~\ref{fig:mtp} shows no difference
-(spaghetti 0.594 vs.\ 0.532, $p=0.44$; lasagna 0.878 vs.\ 0.897, $p=0.12$;
-15 samples each). Draft-and-verify sampling is distribution-preserving in
-theory~\citep{leviathan2023speculative,chen2023speculative}, and for drift
-it is so in practice. An earlier five-sample reading of the same comparison
-had suggested a large penalty; it did not survive replication, which is the
-point of Section~\ref{sec:seeds}.
+bytes, same server, one flag. Figure~\ref{fig:mtp} shows no detectable difference
+(spaghetti 0.594, CI [0.48, 0.70], vs.\ 0.532, CI [0.41, 0.65], $p=0.44$;
+lasagna 0.878 vs.\ 0.897, $p=0.12$; 15 samples each). At this sample size
+the comparison cannot distinguish a shift of about 0.06 from zero on the
+short stimulus, so the result is an absence of evidence for an effect above
+the noise floor, not a demonstrated equivalence. That is consistent with
+draft-and-verify sampling being distribution-preserving in
+theory~\citep{leviathan2023speculative,chen2023speculative}, though the
+theory concerns the algorithm and this test concerns one stack's numerics.
+An earlier five-sample reading of the same comparison had suggested a large
+penalty; it did not survive replication, which is the point of
+Section~\ref{sec:seeds}.
 
 \begin{figure}[htbp]
 \centering
@@ -591,9 +609,12 @@ the 20 prompts is 0.24--0.43 on every configuration and both recipes, and
 the complexity threshold of Paper~A, below which prompts were invisible on
 the short stimulus, does not exist for these models. The rankings are also
 stable. Across the two hosts they agree at $\rho=0.98$ (spaghetti) and
-0.95 (lasagna); across models within the same recipe at 0.83--0.90 on
-spaghetti and 0.70--0.88 on lasagna; and across recipes within a model at
-only 0.25--0.58. A prompt ranking is thus a real, measurable property of a
+0.95 (lasagna), and the agreement is not carried by a few extreme prompts:
+dropping the best and worst prompt leaves $\rho$ at 0.98 and 0.93, the
+smallest value over every leave-two-out pair is 0.97 and 0.93, and removing
+the whole visually oriented category gives 0.97 and 0.92. Across models
+within the same recipe the rankings agree at 0.83--0.90 on spaghetti and
+0.70--0.88 on lasagna; across recipes within a model at only 0.25--0.58. A prompt ranking is thus a real, measurable property of a
 model-and-stimulus pair, reproducible at five samples, and it is shared by
 the models of this generation on a given stimulus.
 
@@ -707,14 +728,18 @@ both metrics and transfers to Flash-Next at 0.77--0.78. By fact type
 (Table~\ref{tab:paper3-facttype}), identifiers (0.81) and names (0.80)
 survive best, numbers with units worse (0.63), and dates worst of all
 (0.35): the financial summary lost every date in every chain and the change
-order kept 13\%. Meta-commentary framing is present in 70--97\% of final
+order kept 13\%. The date figure rests on the six date anchors in the set,
+one in each of six domains, so it is a consistent signal across those six
+documents rather than a large-sample estimate; the other three types rest on
+28 to 96 anchors. Meta-commentary framing is present in 70--97\% of final
 outputs in every domain, inflation runs 1.1--1.9 fold, and 53--93\% of chains
 end locked.
 
 Thinking on has no net effect across domains (0.772 against 0.792,
-$p=0.29$) but reduces anchor survival (0.60 against 0.68) and is
-destructive on the two domains where it matters most, literary prose
-($-0.20$) and the recipe ($-0.15$). The Ultra-Constrained Fidelity prompt,
+$p=0.29$) but reduces anchor survival (0.60 against 0.68), and at five
+samples per domain its largest losses fall on literary prose ($-0.20$) and
+the recipe ($-0.15$), a directional observation rather than a per-domain
+result. The Ultra-Constrained Fidelity prompt,
 one domain-neutral sentence, raises similarity to 0.95 and anchor survival
 to 0.97 across the sixteen domains, improving every one of them
 ($p<10^{-6}$), with inflation 1.05 and meta-commentary in 6\% of outputs. A
@@ -799,8 +824,10 @@ a fact-level check.
         to 0.88--0.98 with 97\% of facts intact.
   \item Measure fact survival, and check dates and quantities specifically;
         they are the first things lost.
-  \item Do not spend effort on seeds, greedy decoding or speculative
-        decoding as drift controls; they do not change the outcome.
+  \item Do not expect seeds or speculative decoding to change drift; at 15
+        samples neither moved the mean. Greedy decoding narrows the spread of
+        outcomes without improving the mean, which matters only if the
+        worst chain is what you care about.
   \item Benchmark the exact build and stack; the format effect is real on
         one of two models and absent on the other.
 \end{enumerate}
@@ -816,8 +843,10 @@ a fact-level check.
         contrast bounds their combined effect.
   \item \textbf{Anchor facts are hand-chosen.} Ten per domain, chosen by the
         author to be checkable; survival is a lower bound on preservation
-        (a paraphrased number counts as lost) and the domain prompts are
-        synthetic documents rather than sampled ones.
+        (``8 minutes'' rewritten as ``eight minutes'' counts as lost), the
+        domain prompts are synthetic documents rather than sampled ones, the
+        type labels are approximate (the literary anchors tagged as names are
+        phrases), and the date type has only six anchors.
   \item \textbf{Meta-commentary and genre drift are regex measures}, tuned
         on the outputs of these models; they will need re-tuning for others.
   \item \textbf{Small $n$ in places.} Thinking-on breadth and the fidelity
@@ -879,7 +908,7 @@ author's responsibility.
 \subsection{Recipes}
 The two recipes are those of Paper~A. \textbf{Spaghetti}: ``Step 1: Boil
 water. Step 2: Add pasta for 8 minutes. Step 3: Drain and serve with
-sauce.'' \textbf{Lasagna}: the 21-step beef lasagna recipe of Paper~A,
+sauce.'' \textbf{Lasagna}: the beef lasagna recipe of Paper~A, nominally 21 steps,
 Appendix~A, sent with steps 12--17 compressed into one line, exactly as in
 that paper.
 
