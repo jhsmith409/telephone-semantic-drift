@@ -1,0 +1,25 @@
+[project]
+name = "telephone"
+version = "0.1.0"
+description = "AI Telephone Game — watch messages distort through a chain of AI agents"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.0",
+    "matplotlib>=3.10.8",
+    "ollama>=0.4",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
+    "scipy>=1.17.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telephone"]

@@ -1,0 +1,27 @@
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Experiment output (full chain data ships as a GitHub Release asset)
+results/*
+!results/README.md
+!results/paper_figures/
+!results/qwen35_paper_figures/
+!results/embedding_validation/
+!results/embedding_validation_qwen35/
+*.log
+
+# LaTeX build products
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc

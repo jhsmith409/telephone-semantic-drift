@@ -1,0 +1,43 @@
+\begin{table}[t]
+\centering
+\caption{Qwen3.5 drift by size and quantization. Mean final cosine
+  similarity at iteration 30 over \emph{clean} chains only (chains with
+  no empty, runaway-thinking generation), with 95\% bootstrap CI,
+  sorted by clean spaghetti mean descending. $n_c$ is the number of
+  clean 30-iteration chains behind each mean; ``RA'' is the
+  runaway-thinking rate, i.e.\ the fraction of completed chains that
+  contained at least one empty generation (runaway chains are excluded
+  from the means). All-chain means are reported in the supplementary
+  \texttt{all\_stats.json}.}
+\label{tab:size_quant}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccccccl}
+\toprule
+Size & Quant & \multicolumn{4}{c}{Spaghetti} & \multicolumn{3}{c}{Lasagna} & Tier \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-9}
+ & & Mean & 95\% CI & $n_c$ & RA & Mean & $n_c$ & RA & \\
+\midrule
+122B & q4\_K\_M & 0.925 & [0.915, 0.937] & 5 & 0.00 (0/5) & 0.864 & 5 & 0.00 (0/5) & Stable \\
+35B MoE & q4\_K\_M & 0.923 & [0.920, 0.927] & 2 & 0.50 (2/4) & 0.812 & 5 & 0.00 (0/5) & Stable \\
+27B & q4\_K\_M & 0.914 & [0.898, 0.929] & 3 & 0.40 (2/5) & 0.829 & 5 & 0.00 (0/5) & Stable \\
+0.8B & q8\_0 & 0.912 & [0.912, 0.912] & 1 & 0.80 (4/5) & --- & 0 & 1.00 (5/5) & Stable \\
+2B & bf16 & 0.903 & [0.892, 0.926] & 3 & 0.40 (2/5) & 0.760 & 2 & 0.60 (3/5) & Stable \\
+27B & bf16 & 0.900 & [0.886, 0.914] & 5 & 0.00 (0/5) & 0.855 & 5 & 0.00 (0/5) & Stable \\
+4B & bf16 & 0.885 & [0.873, 0.899] & 5 & 0.00 (0/5) & 0.741 & 5 & 0.00 (0/5) & Stable \\
+2B & q8\_0 & 0.876 & [0.814, 0.931] & 5 & 0.00 (0/5) & 0.846 & 1 & 0.80 (4/5) & Stable \\
+27B & q8\_0 & 0.871 & [0.833, 0.910] & 5 & 0.00 (0/5) & 0.839 & 5 & 0.00 (0/5) & Stable \\
+4B & q4\_K\_M & 0.861 & [0.819, 0.899] & 5 & 0.00 (0/5) & 0.823 & 5 & 0.00 (0/5) & Stable \\
+9B & q4\_K\_M & 0.859 & [0.820, 0.892] & 5 & 0.00 (0/5) & 0.830 & 5 & 0.00 (0/5) & Stable \\
+9B & bf16 & 0.851 & [0.811, 0.893] & 5 & 0.00 (0/5) & 0.815 & 5 & 0.00 (0/5) & Stable \\
+35B MoE & bf16 & 0.846 & [0.798, 0.887] & 5 & 0.00 (0/5) & 0.797 & 5 & 0.00 (0/5) & Stable \\
+9B & q8\_0 & 0.844 & [0.783, 0.893] & 5 & 0.00 (0/5) & 0.795 & 5 & 0.00 (0/5) & Stable \\
+35B MoE & q8\_0 & 0.837 & [0.815, 0.858] & 5 & 0.00 (0/5) & 0.803 & 5 & 0.00 (0/5) & Stable \\
+4B & q8\_0 & 0.824 & [0.801, 0.846] & 5 & 0.00 (0/5) & 0.788 & 5 & 0.00 (0/5) & Stable \\
+\midrule
+2B & q4\_K\_M & 0.789 & [0.612, 0.889] & 3 & 0.40 (2/5) & 0.772 & 4 & 0.20 (1/5) & Moderate \\
+\midrule
+0.8B & bf16 & --- & --- & 0 & 1.00 (5/5) & --- & 0 & 1.00 (5/5) & Catastrophic \\
+\bottomrule
+\end{tabular}}
+\end{table}

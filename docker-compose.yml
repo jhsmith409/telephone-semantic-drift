@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    network_mode: host
+    env_file: .env
+
+  batch:
+    build: .
+    network_mode: host
+    env_file: .env
+    command: ["uv", "run", "python", "-m", "telephone.batch_api"]
