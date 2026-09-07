@@ -77,3 +77,8 @@ under test (seed, temperature, system prompt, thinking mode).
   rather than the original host name — notably the Paper B replication host, whose
   directory and condition keys read `qwen3.6-35b-nvfp4-gpu-host-d`.
   `scripts/analyze_paper3.py` expects exactly that placeholder name.
+
+
+## v1.2-data (2026-09-07, addendum)
+
+Sampler A/B for runaway thinking (Qwen3.6-35B NVFP4, thinking on): `telephone-results-2026-09-07-v1.2-sampler.tar.gz` contains `results/paper3/qwen3.6-35b-nvfp4/sampler_bare_p11.json`, `sampler_vendor_p11.json`, `sampler_bare_spaghetti.json` and the updated `sysprompt_think.json` (prompt 11 topped up to 15 chains). Unpack over the v1.1 tree. SHA-256 `6f40420f9d89232e59a4e0b90633b62528f518667e5141df4ef78325b145ab19`.
