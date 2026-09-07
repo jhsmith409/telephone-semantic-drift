@@ -1,0 +1,885 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{url}
+
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
+
+\title{Semantic Drift Across Qwen Generations:\\
+Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity
+Misses in Iterated Paraphrase Chains}
+
+\author{
+  James H.\ Smith \\
+  Joshua.AI LLC \\
+  \texttt{jim@joshua8.ai}
+}
+
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We extend the telephone-game study of semantic drift in iterated LLM
+paraphrase chains~\citep{smith2026drift} to the Qwen3.6 and Qwen3.8 model
+generations, and we use the fast, cheap inference these models afford to ask
+questions the earlier work could not: whether a sampling seed reproduces a
+chain at all, what reasoning (``thinking'') mode does to drift, whether
+speculative decoding changes it, how prompts and drift behave across sixteen
+knowledge domains, and whether embedding similarity measures the loss of
+information that practitioners care about. Across 2{,}662 completed chains
+and 85{,}460 model calls on eight configurations served by vLLM, SGLang and
+llama.cpp, we find:
+(1)~seeds do not pin chains on any of these stacks---identical requests
+diverge at the first token even at temperature~0 and even with one request in
+flight---so drift must be reported over samples, and we do so at 15 to 30
+chains per condition;
+(2)~thinking mode is a large effect whose sign depends on the model, costing
+Qwen3.6-35B up to 0.16 in final similarity and never reaching a fixed point
+over 100 iterations, while lifting Qwen3.8-27B from 0.58 to 0.88 on the short
+stimulus; no system prompt rescues the model it hurts, and it retains the
+runaway-thinking failure of the previous generation at a low rate;
+(3)~multi-token-prediction speculative decoding leaves drift unchanged, and
+temperature~0 narrows the spread without changing the mean;
+(4)~system-prompt rankings replicate across hosts ($\rho=0.95$--$0.98$) and
+transfer across models within a generation ($\rho=0.70$--$0.90$), reversing
+the non-transfer reported for older models, with one domain-neutral fidelity
+prompt raising every one of sixteen domains to 0.88--0.98;
+(5)~most chains lock byte-for-byte within ten iterations, so ``drift'' on
+these models is largely where a copying attractor caught the chain; and
+(6)~across sixteen domains with ten checkable facts each, cosine similarity
+is only weakly related to the survival of those facts ($\rho=0.32$), and on
+construction statements of work it is negatively related ($\rho=-0.42$):
+outputs inflate two- to seven-fold and reframe as memos while every number
+survives. Dates are the most fragile fact type (35\% survival), identifiers
+the most robust (81\%). We conclude that similarity-based drift scores
+measure genre and length change far more than information loss, and we
+release the full chain texts so that other metrics can be applied.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+In the companion paper~\citep{smith2026drift} (hereafter Paper~A) we
+measured semantic drift in iterated paraphrase chains across seven model
+families and, within the Qwen3.5 family, across size, precision,
+quantization format, serving stack, temperature and system prompt. That
+study reached three conclusions that this one takes as its starting point:
+model choice dominates every other factor; a discrete \emph{runaway
+thinking} failure, in which a model with reasoning enabled spends its whole
+generation budget inside the thinking block, removes a large fraction of
+chains on some stacks; and system-prompt rankings did not transfer between
+the models tested.
+
+Paper~A also left questions it could not answer. Its experiments were run at
+five ``seeds'' per condition on the assumption that a seed reproduces a
+chain, which was never tested. Thinking mode could not be switched per
+request on the serving stacks then in use, so its effect was inferred from
+failure rates rather than measured. Speculative decoding was not available.
+Every stimulus was a cooking recipe. And cosine similarity to the original
+text was the only measure of drift, validated against a second embedding
+model but never against the information the text actually carried.
+
+The Qwen3.6 and Qwen3.8 generations, released between April and August
+2026, make those questions tractable. Served in NVFP4 on Blackwell GPUs
+they paraphrase a recipe in one to three seconds, thinking is a per-request
+switch on every serving stack, and llama.cpp exposes the same weights with
+and without a multi-token-prediction draft head. We therefore ran roughly
+three times as many chains as Paper~A, at 15 to 30 samples per condition,
+on eight configurations of four models, and added two kinds of stimulus the
+earlier work lacked: construction statements of work with internally
+consistent quantities, and sixteen prompts from sixteen knowledge domains,
+each carrying ten checkable anchor facts.
+
+Our contributions are:
+\begin{enumerate}[leftmargin=*]
+  \item A direct test of seed reproducibility on three serving stacks,
+        finding none (Section~\ref{sec:seeds}), and a study design that
+        treats every chain as an independent sample.
+  \item A cross-generation comparison at matched size from Qwen3 through
+        Qwen3.5, 3.6 and 3.8, showing that drift on the short stimulus has
+        \emph{worsened} with each generation as models grew more verbose,
+        while drift on the long stimulus improved (Section~\ref{sec:baseline}).
+  \item The first controlled measurement of thinking mode in iterated
+        generation: a model-dependent sign, no fixed point at 100
+        iterations, no rescue by prompting, and a residual runaway rate
+        (Section~\ref{sec:thinking}).
+  \item Null results for speculative decoding and for greedy decoding as
+        drift controls, and a replication of the format-and-stack effect on
+        two new generations (Sections~\ref{sec:format} and
+        \ref{sec:temperature}).
+  \item Evidence that system-prompt rankings are a stable, transferable
+        property within a generation, and that a single fidelity prompt
+        works in every domain tested (Sections~\ref{sec:sysprompt} and
+        \ref{sec:breadth}).
+  \item Byte-level locking as the dominant terminal state of a chain
+        (Section~\ref{sec:locking}).
+  \item Two new fidelity metrics---numeric-token survival and anchor-fact
+        survival---and the finding that embedding similarity tracks neither
+        (Sections~\ref{sec:concrete} and \ref{sec:breadth}).
+\end{enumerate}
+
+\section{Related Work}
+\label{sec:related}
+
+Paper~A reviews the literature on iterated rephrasing and cultural
+attractors~\citep{perez2025cultural,brinkmann2023machine,acerbi2023content},
+the broken-telephone effect~\citep{mohamed2025broken}, attractor
+dynamics~\citep{wang2025attractor,chytas2025concept}, agent
+drift~\citep{rath2026agent}, model collapse under recursive
+generation~\citep{shumailov2024collapse,shumailov2023curse}, iterated
+learning~\citep{kirby2008cumulative}, and quantization
+effects~\citep{han2026quantization,hooper2024kvquant,liu2024kivi}.
+\citet{mollah2025telephone} apply a telephone-game protocol to unified
+vision-language models, alternating captioning and image generation, and
+find catastrophic rather than gradual collapse; their object-level
+compliance score is the visual analogue of the anchor-fact survival metric
+introduced here. \citet{belem2026certainty} show that repeated rewriting
+hardens hedged statements into assertions while leaving surface content
+intact, a change no embedding metric detects; our fact-survival results are
+a second demonstration that similarity and fidelity come apart.
+
+Three bodies of work bear on the new questions. Nondeterminism in LLM
+inference is now understood to arise from batch-dependent kernel
+scheduling rather than from sampling~\citep{he2025nondeterminism}, with
+batch-invariant kernels~\citep{zhang2025deterministic,zhao2026corun}
+proposed as remedies; Section~\ref{sec:seeds} measures the consequence for
+iterated generation. Speculative decoding~\citep{leviathan2023speculative,
+chen2023speculative} and its multi-token-prediction
+variant~\citep{gloeckle2024multitoken,deepseek2024v3} are
+distribution-preserving in principle; Section~\ref{sec:format} tests
+whether that holds for drift in practice. Instruction-following
+capacity~\citep{jaroslawicz2025ifscale} bears on why thinking mode and
+constraining prompts interact as they do.
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Framework and metrics}
+\label{sec:framework}
+
+The chain protocol is unchanged from Paper~A: a stimulus $x_0$ is sent with
+the instruction ``Paraphrase this to the next agent: $x_t$'', the reply
+becomes $x_{t+1}$, and cosine similarity between the Qwen3-Embedding-0.6B
+embeddings~\citep{zhang2025qwen3embedding} of $x_t$ and $x_0$ is recorded
+at every step. Chains run 30 iterations unless stated (100 in the
+long-horizon runs). Temperature is 0.7 and the generation budget 16{,}384
+tokens unless varied. An empty reply keeps the previous message as the next
+input and is recorded.
+
+Four per-chain measures are new. \emph{Locking}: an iteration whose output
+is byte-identical to its input; a chain is \emph{locked at end} if its last
+three outputs are identical. \emph{Inflation}: final word count divided by
+the stimulus word count. \emph{Meta-commentary}: whether the final output
+contains framing phrases such as ``here is the paraphrase'' or ``next
+agent''. \emph{Fact survival}: for the construction documents, the fraction
+of the stimulus's numeric tokens present verbatim in the output; for the
+breadth prompts, the fraction of ten hand-chosen anchor facts (numbers with
+units, names, dates, identifiers) present after whitespace and case
+normalisation. All are computed offline from the saved texts.
+
+\subsection{Models and serving}
+\label{sec:models}
+
+Table~\ref{tab:inventory} lists the eight configurations. The NVFP4
+builds~\citep{nvidia2025nvfp4,nvidia2026qwen36nvfp4} run on
+vLLM~\citep{kwon2023vllm} for the 35B mixture-of-experts and 27B dense
+models and on SGLang~\citep{zheng2024sglang} for Flash-Next, all with an
+fp8 KV cache and thinking disabled by default; thinking is enabled per
+request through the chat-template switch and the reasoning block is
+separated from the returned content by the server's reasoning parser. The
+GGUF builds~\citep{gerganov_llamacpp,unsloth2026qwen36gguf,
+unsloth2026qwen38gguf} run on llama.cpp with a q8\_0 KV cache and reasoning
+disabled; the Qwen3.8-27B GGUF file carries an embedded multi-token
+prediction head that llama.cpp can use as a self-speculative draft, giving a
+same-weights comparison with and without speculative decoding. Two
+byte-identical vLLM deployments of Qwen3.6-35B on different machines (hosts
+A and B) provide a cross-host replicate.
+
+\begin{table}[htbp]
+\centering
+\caption{Model inventory. All Qwen builds are the instruct checkpoints
+  \citep{qwen2026qwen36_35b,qwen2026qwen36_27b,qwen2026qwen38_27b,
+  qwen2026qwen38flashnext}. GGUF tier is Unsloth UD-Q4\_K\_XL. Hardware is
+  given in Appendix~\ref{app:compute}.}
+\label{tab:inventory}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllc}
+\toprule
+Model & Architecture & Format & Stack & Thinking switchable \\
+\midrule
+Qwen3.6-35B-A3B (hosts A, B) & MoE, 3B active & NVFP4 & vLLM & yes \\
+Qwen3.6-35B-A3B & MoE, 3B active & GGUF Q4\_K\_XL & llama.cpp & no (off) \\
+Qwen3.6-27B & dense & GGUF Q4\_K\_XL & llama.cpp & no (off) \\
+Qwen3.8-27B & dense, hybrid attention & NVFP4 & vLLM (TP2) & yes \\
+Qwen3.8-27B & dense & GGUF Q4\_K\_XL & llama.cpp & no (off) \\
+Qwen3.8-27B + MTP & dense & GGUF Q4\_K\_XL & llama.cpp, draft-MTP & no (off) \\
+Qwen3.8-Flash-Next & MoE 125B, 6B active & NVFP4 & SGLang & yes \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Stimuli}
+\label{sec:stimuli}
+
+Three stimulus sets are used. The two recipes of Paper~A (3-step
+\emph{spaghetti}, 21-step \emph{lasagna}, reproduced in
+Appendix~\ref{app:prompts}) anchor every comparison with the earlier data.
+Two construction statements of work in the format that a specification
+ingestion product emits for subcontractor bidding---a 95-word summary with
+three scope items and one exclusion, and a 585-word detailed statement with
+twenty scope items, an exclusions list attributing work to other trades, an
+alternate and a base bid---carry 20 and 131 numeric tokens respectively,
+with every volume computed from the stated dimensions so that a drifted
+number is detectable. Sixteen prompts of 145--190 words, one per domain
+(recipe, laboratory protocol, lockout/tagout procedure, concrete scope of
+work, construction RFI, change order, contract clause, building code,
+hospital discharge instructions, Python function, REST API reference,
+scientific abstract, financial summary, news report, travel itinerary and
+literary prose), each carry exactly ten anchor facts tagged by type.
+Appendix~\ref{app:prompts} gives every text and anchor.
+
+\subsection{Experiments}
+\label{sec:design}
+
+All conditions use 15 samples unless stated; a sample is one chain. Table
+\ref{tab:paper3-baseline} and the per-section tables carry $n$.
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Baseline}: both recipes on all eight configurations; 30
+        samples on the pooled Qwen3.6-35B NVFP4 hosts.
+  \item \textbf{Reproducibility}: the same ten seeds run twice on host A,
+        once on host B, and twice more on host A with one request in
+        flight; 15 samples at temperature~0 on the three GPU models.
+  \item \textbf{Thinking}: both recipes with thinking on, on the four
+        thinking-capable deployments; 100-iteration runs with thinking off
+        (host B, 15 samples) and on (host B 15, Qwen3.8-27B and Flash-Next
+        5 each); thinking combined with all 20 system prompts on host A
+        (lasagna, 5 samples).
+  \item \textbf{Format and stack}: NVFP4 against GGUF for Qwen3.6-35B and
+        Qwen3.8-27B; Qwen3.8-27B GGUF with and without MTP.
+  \item \textbf{Temperature}: $T\in\{0,0.3,0.5,0.7,1.0\}$ on the three GPU
+        models and both hosts, 5 samples per point except 15 at $T=0$ and
+        $T=0.7$.
+  \item \textbf{System prompts}: the 20 prompts of Paper~A on both recipes
+        for Qwen3.6-35B (both hosts), Qwen3.8-27B and Flash-Next, 5 samples
+        (10 for host A spaghetti).
+  \item \textbf{Construction}: both statements of work, thinking off and on,
+        on the three GPU models (30 samples for the pooled 35B hosts, 15
+        otherwise), plus the six domain-neutral system prompts on host B.
+  \item \textbf{Breadth}: the sixteen domain prompts with thinking off on
+        Qwen3.6-35B (15 samples per host, pooled to 30) and Flash-Next (5),
+        with thinking on (host B, 5) and with the Ultra-Constrained Fidelity
+        prompt (host A, 5).
+\end{enumerate}
+In total 2{,}662 chains and 85{,}460 model calls completed with no API
+errors. Every thinking-off chain produced text at every iteration; the
+empty completions in the thinking-on conditions are analysed in
+Section~\ref{sec:thinking}.
+
+\subsection{Statistics}
+\label{sec:stats}
+
+Every mean carries a percentile bootstrap 95\% interval
+($B=10{,}000$)~\citep{efron1993bootstrap}. Two-group contrasts use the
+Mann--Whitney $U$ test, rank comparisons Spearman's $\rho$ with a bootstrap
+interval, and rates a Wilson interval. Because Section~\ref{sec:seeds} shows
+that seeds do not reproduce chains, no test treats seed-matched chains as
+pairs.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Baseline drift and the cross-generation picture}
+\label{sec:baseline}
+
+Figure~\ref{fig:baseline} and Table~\ref{tab:paper3-baseline} give the
+baseline. On the 21-step lasagna recipe every configuration finishes between
+0.85 and 0.91, a narrow band with Qwen3.8-27B NVFP4 (0.905) and the MTP
+build (0.897) at the top and Qwen3.6-35B GGUF (0.847) at the bottom. On the
+3-step spaghetti recipe the configurations spread from 0.53 to 0.74 and
+their within-condition spread is three to eight times larger (standard
+deviations of 0.09--0.25 against 0.02--0.07), with individual chains as low
+as 0.12. The short stimulus, not the long one, is the hard case for these
+models, and the reason is visible in the last two columns of the table: on
+spaghetti every configuration inflates the 17-word recipe five- to
+seven-fold and attaches meta-commentary in 80--100\% of chains, whereas on
+lasagna the word count is preserved to within 10\%.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.33\textheight,keepaspectratio]{../results/paper3_figures/fig1_baseline_trajectories.png}
+\caption{Baseline drift trajectories for the six non-MTP configurations,
+  mean with bootstrap band; $n$ in the legend. Left: spaghetti. Right:
+  lasagna.}
+\label{fig:baseline}
+\end{figure}
+
+\input{tables/table1_baseline}
+
+\paragraph{Across generations.}
+Figure~\ref{fig:crossgen} and Table~\ref{tab:paper3-crossgen} place these
+results beside Paper~A's Qwen3 pilot and Qwen3.5 data at matched size,
+using Paper~A's clean chains (those without runaway failures) for the
+Qwen3.5 rows. On the short stimulus the trend is monotonically downward
+after Qwen3.5: the 27B dense line runs 0.564 (Qwen3-32B, single pilot
+chain), 0.914 (Qwen3.5), 0.680 (Qwen3.6), 0.594 (Qwen3.8), and the
+35B-class MoE line 0.806, 0.923, 0.576 (GGUF) or 0.736 (NVFP4); the 122B
+class falls from 0.925 (Qwen3.5-122B) to 0.731 (Flash-Next). On the long
+stimulus the newer generations are as good or better: 0.829 (Qwen3.5-27B)
+against 0.889 and 0.878--0.905, and 0.812--0.845 against 0.847--0.896 for the
+35B class. The Qwen3.5 short-stimulus values rest on two to three clean
+chains each and are existence results, as Paper~A notes; the newer values
+rest on fifteen to thirty. The pattern is nonetheless consistent with
+everything else in this paper: the newer models paraphrase a long document
+faithfully and cannot leave a short one alone.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.33\textheight,keepaspectratio]{../results/paper3_figures/fig2_cross_generation.png}
+\caption{Final similarity at matched model size across four Qwen
+  generations. Qwen3 values are single unseeded pilot chains and have no
+  lasagna run; Qwen3.5 values are Paper~A's clean chains only, with $n$
+  shown. Error bars are bootstrap 95\% intervals.}
+\label{fig:crossgen}
+\end{figure}
+
+\input{tables/table2_cross_generation}
+
+\subsection{Seeds do not reproduce chains}
+\label{sec:seeds}
+
+Every experiment in Paper~A, and in the prior literature we are aware of,
+labels repeated runs by sampling seed on the assumption that the seed fixes
+the trajectory. Figure~\ref{fig:determinism} and
+Table~\ref{tab:paper3-determinism} test that assumption on host A. Ten
+seeds run twice produced ten pairs of chains that differed at iteration~1 in
+every case, with zero identical iterations in any pair and final
+similarities differing by 0.045 on average (maximum 0.096). Running the same
+five seeds twice with a single request in flight, so that no other request
+could share a batch, changed nothing: all five pairs diverged at
+iteration~1. Two byte-identical single requests at temperature~0 with the
+same seed returned different text, disagreeing at about the ninth token. The
+deployment---an NVFP4 mixture-of-experts on a FlashInfer backend with prefix
+caching---is not batch-invariant in the sense of
+\citet{he2025nondeterminism}, and neither the seed nor greedy decoding
+restores reproducibility.
+
+What does replicate is the distribution. Host A and host B, two identical
+deployments on different machines, give baseline means that are
+statistically indistinguishable (spaghetti 0.749 vs.\ 0.723, $p=0.63$;
+lasagna 0.904 vs.\ 0.887, $p=0.38$), and every ranking reported later in
+this paper agrees across the two hosts at $\rho\geq0.95$. Temperature~0
+does narrow the spread: at 15 samples per condition the standard deviation
+of final similarity falls from 0.089 to 0.016 on Qwen3.6-35B spaghetti and
+from 0.240 to 0.070 on Qwen3.8-27B spaghetti, but the means move by less
+than 0.05 in five of six cases (the exception is Flash-Next on lasagna,
+0.918 against 0.876, $p<0.001$). Greedy decoding is a variance reduction,
+not a fidelity improvement, and it is not reproducible either.
+
+The consequence for method is that a ``seed'' is one draw from the model's
+output distribution under that deployment. We therefore report every
+condition as a sample of 15 to 30 chains with a bootstrap interval, we never
+pair chains by seed, and we regard the roughly 0.05 within-host difference
+between draws as the noise floor below which a contrast between conditions
+is not interpretable.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.33\textheight,keepaspectratio]{../results/paper3_figures/fig3_determinism.png}
+\caption{Seed reproducibility. (a) Final similarity for ten seeds run twice
+  on host A and once on host B. (b) The same for five seeds with a single
+  request in flight. (c) Distributions of final similarity at $T=0$ and
+  $T=0.7$, 15 samples each, three models.}
+\label{fig:determinism}
+\end{figure}
+
+\input{tables/table3_determinism}
+
+\subsection{Thinking mode}
+\label{sec:thinking}
+
+Table~\ref{tab:paper3-thinking} and Figure~\ref{fig:thinking} give the
+central result of this section: enabling reasoning changes drift by 0.03 to
+0.30 in every condition, significant in all eight, and the direction is a
+property of the model. Qwen3.6-35B loses 0.09 on spaghetti and 0.15--0.16 on
+lasagna, identically on both hosts, while generating 1{,}400--3{,}100
+reasoning tokens per iteration. Qwen3.8-27B gains 0.30 on spaghetti and
+0.03 on lasagna with only 110--440 reasoning tokens, and Flash-Next gains
+0.14 and 0.06 with 95--310. Thinking also collapses the variance of the
+model it helps: Qwen3.8-27B's spaghetti standard deviation falls from 0.24
+to 0.02, because the reasoning step suppresses the failure that dominates
+its baseline, in which the model answers the paraphrase request with a menu
+of three options, the next iteration paraphrases the menu, and the chain
+locks into a memo about a missing source text at similarity 0.14.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.4\textheight,keepaspectratio]{../results/paper3_figures/fig4_thinking.png}
+\caption{Thinking mode. (a) Final similarity with thinking off and on, per
+  configuration and recipe. (b) Reasoning tokens per iteration. (c)
+  100-iteration trajectories with thinking off and on.}
+\label{fig:thinking}
+\end{figure}
+
+\input{tables/table4_thinking}
+
+\paragraph{No fixed point.}
+With thinking off, 100-iteration chains on host B are flat after
+iteration~30: the mean moves by $-0.008$ (spaghetti) and $-0.005$ (lasagna)
+between iterations 30 and 100, and only one to two of fifteen chains dip by
+more than 0.05 in that span. With thinking on the same model keeps
+drifting: $-0.072$ and $-0.056$ over the same span, with 73\% and 100\% of
+chains dipping, reaching 0.56 and 0.63 at their minima. Qwen3.8-27B with
+thinking drifts mildly over 100 iterations and Flash-Next holds. A
+reasoning model that rewrites a text is, on this evidence, not an iterated
+function with a fixed point; each pass reconsiders the document.
+
+\paragraph{No prompt rescues it.}
+On Qwen3.6-35B lasagna with all 20 system prompts, thinking on is worse
+than thinking off for 18 of the 20 (mean $-0.053$), the best prompt with
+thinking (Precise Transmitter, 0.915) merely matches the no-prompt baseline
+without thinking (0.913), and the prompt ranking with thinking correlates
+only weakly with the ranking without ($\rho=0.43$). Where thinking helps,
+in Qwen3.8-27B, it does so because a short reasoning pass suppresses a
+formatting failure; where it hurts, the reasoning pass rewrites the
+document from its own summary of it, and the prompt cannot reach that
+summary.
+
+\paragraph{Runaway thinking persists at a low rate.}
+Paper~A found that Qwen3.5 with reasoning enabled exhausted its 16{,}384-
+token budget inside the thinking block in 13.5\% of chains. Here every one
+of the 2{,}222 thinking-off chains produced text at every iteration
+(runaway rate 0, Wilson interval $[0, 0.17\%]$), and so did every
+thinking-on chain on Qwen3.8-27B and Flash-Next. On Qwen3.6-35B with
+thinking on, 17 of the 300 such chains (5.7\%) contained at least one
+iteration that hit the budget, concentrated in the lasagna system-prompt conditions and
+the long construction document, and 13 of those returned an empty
+completion. The failure Paper~A described has therefore been reduced by an
+order of magnitude in the following generation and removed in the one after,
+but it has not disappeared, and the prompts that trigger it (Visual
+Tutorial Style, Friendly Conversational, Multimodal Visual Focus) are the
+verbose ones rather than, as in Qwen3.5, the constraining ones.
+
+\subsection{Serving format, stack, and speculative decoding}
+\label{sec:format}
+
+Paper~A found that 4-bit builds of the same Qwen3.5 weights differed by up
+to 0.26 on the short stimulus depending on format and serving stack.
+Table~\ref{tab:paper3-format} and Figure~\ref{fig:format} repeat the
+comparison on two new generations, with the caveat that the GGUF arm here
+differs from the NVFP4 arm in quantization, serving software, KV-cache
+precision and GPU generation at once (Appendix~\ref{app:compute}). For
+Qwen3.6-35B the NVFP4 build on vLLM is better on both recipes (0.736 vs.\
+0.576 on spaghetti, $p<0.001$; 0.896 vs.\ 0.847 on lasagna, $p=0.006$). For
+Qwen3.8-27B the two builds are indistinguishable on spaghetti (0.582 vs.\
+0.594, $p=0.93$) and the NVFP4 build is slightly better on lasagna (0.905
+vs.\ 0.878, $p=0.016$). The direction of Paper~A's effect, which favoured
+GGUF, is not reproduced; its magnitude on one of the two models is.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth,height=0.3\textheight,keepaspectratio]{../results/paper3_figures/fig5_format_stack.png}
+\caption{NVFP4 on vLLM against GGUF Q4\_K\_XL on llama.cpp for the same
+  weights, both recipes, with bootstrap intervals.}
+\label{fig:format}
+\end{figure}
+
+\input{tables/table5_format_stack}
+
+\paragraph{Speculative decoding is a null.}
+The Qwen3.8-27B GGUF file served with and without its multi-token-prediction
+draft head is the cleanest infrastructure comparison in either paper: same
+bytes, same server, one flag. Figure~\ref{fig:mtp} shows no difference
+(spaghetti 0.594 vs.\ 0.532, $p=0.44$; lasagna 0.878 vs.\ 0.897, $p=0.12$;
+15 samples each). Draft-and-verify sampling is distribution-preserving in
+theory~\citep{leviathan2023speculative,chen2023speculative}, and for drift
+it is so in practice. An earlier five-sample reading of the same comparison
+had suggested a large penalty; it did not survive replication, which is the
+point of Section~\ref{sec:seeds}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth,height=0.3\textheight,keepaspectratio]{../results/paper3_figures/fig6_mtp.png}
+\caption{Multi-token-prediction speculative decoding on Qwen3.8-27B GGUF:
+  per-chain final similarity with and without the draft head.}
+\label{fig:mtp}
+\end{figure}
+
+\subsection{Temperature}
+\label{sec:temperature}
+
+Figure~\ref{fig:temperature} extends the temperature ablation to the new
+models with 15 samples at $T=0$. The stable configuration, Qwen3.6-35B, is
+flat within 0.05 across the range on both recipes and both hosts.
+Qwen3.8-27B on spaghetti is U-shaped, 0.718 at $T=0$, falling to 0.582 at
+$T=0.7$ and recovering to 0.747 at $T=1.0$, the same non-monotonic pattern
+Paper~A reported for small Qwen3.5 models. Flash-Next declines with
+temperature on lasagna (0.918 to 0.792). None of the three models is
+improved by greedy decoding beyond the variance reduction described in
+Section~\ref{sec:seeds}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.3\textheight,keepaspectratio]{../results/paper3_figures/fig7_temperature.png}
+\caption{Final similarity against temperature; $n$ per point in the
+  legend. Both Qwen3.6-35B hosts are shown separately.}
+\label{fig:temperature}
+\end{figure}
+
+\subsection{System prompts transfer within a generation}
+\label{sec:sysprompt}
+
+Paper~A found that prompt rankings did not transfer across families and
+transferred only partially within Qwen3.5. Figure~\ref{fig:sysprompt} and
+Table~\ref{tab:paper3-sysprompt} give a different answer for Qwen3.6 and
+3.8. The effect is large everywhere: the spread between best and worst of
+the 20 prompts is 0.24--0.43 on every configuration and both recipes, and
+the complexity threshold of Paper~A, below which prompts were invisible on
+the short stimulus, does not exist for these models. The rankings are also
+stable. Across the two hosts they agree at $\rho=0.98$ (spaghetti) and
+0.95 (lasagna); across models within the same recipe at 0.83--0.90 on
+spaghetti and 0.70--0.88 on lasagna; and across recipes within a model at
+only 0.25--0.58. A prompt ranking is thus a real, measurable property of a
+model-and-stimulus pair, reproducible at five samples, and it is shared by
+the models of this generation on a given stimulus.
+
+The winners and losers are consistent. The anti-drift and constrained
+categories score 0.86--0.95, the visually oriented prompts 0.65--0.78 on
+every configuration, below the no-prompt baseline, and the best single
+prompt is a fidelity instruction (100\% Fidelity, Ultra-Constrained
+Fidelity or Precise Transmitter) on six of eight configuration--recipe
+pairs, at 0.94--0.97. On Qwen3.8-27B spaghetti the worst prompt is no
+prompt at all (0.672), because any instruction suppresses the menu-of-
+options failure described in Section~\ref{sec:thinking}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{../results/paper3_figures/fig8_sysprompt.png}
+\caption{System prompts. (a) Per-prompt final similarity, 20 prompts, four
+  configurations, both recipes. (b) Spearman rank correlation between
+  configuration--recipe pairs. (c) Category means. (d) Thinking off against
+  on per prompt, Qwen3.6-35B lasagna.}
+\label{fig:sysprompt}
+\end{figure}
+
+\input{tables/table6_sysprompt}
+
+\subsection{Byte-level locking}
+\label{sec:locking}
+
+Paper~A described fixed-point attractors as similarity plateaus. The saved
+texts show something stronger. Figure~\ref{fig:locking} reports the fraction
+of chains whose last three outputs are byte-identical: 87\% for Qwen3.6-35B
+NVFP4 on both recipes, 93\% for Qwen3.8-27B NVFP4, 60--100\% for the GGUF
+builds, with mean lock onset between iterations 3.5 and 9.5. At temperature
+0.7 these models copy their input verbatim once it has been rewritten a few
+times; ``paraphrase'' collapses into ``repeat'', and the final similarity
+mostly records where the copying attractor caught the chain. Flash-Next is
+the exception (20\% on spaghetti, 0\% on lasagna, onset at iteration 27
+when it locks at all) and keeps rewriting to the end. With thinking on no
+chain of any model locks, which is the mechanism behind the missing fixed
+point of Section~\ref{sec:thinking}: a reasoning pass never reproduces its
+input exactly.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.3\textheight,keepaspectratio]{../results/paper3_figures/fig9_locking.png}
+\caption{Locked-at-end rate with Wilson intervals, and lock-onset
+  distribution, per configuration and recipe, thinking off and on.}
+\label{fig:locking}
+\end{figure}
+
+\subsection{Construction statements of work: similarity against numbers}
+\label{sec:concrete}
+
+Table~\ref{tab:paper3-concrete} and Figure~\ref{fig:concrete} report the
+first non-recipe stimulus. On the 95-word summary statement of work, all
+three models finish at similarity 0.73--0.75, a value that in the recipe
+data would indicate substantial drift. Yet every one of the document's
+numeric tokens survives thirty paraphrases in essentially every chain
+(numeric survival 0.998--1.000). What the similarity score is registering is
+that the models inflate the document 2.3--2.4-fold and, in 60--100\% of
+chains, reframe it as a memo or cover email to a project manager, with
+placeholders for the sender's name; the quantities, specifications and
+standards are all still there. On the 585-word detailed statement,
+similarity is higher (0.81--0.85) while numeric survival is lower
+(0.85--0.91), and the exclusions list, the clause a bidder must see, is
+retained in 97--100\% of chains. Across the 120 baseline chains, similarity
+and numeric survival are negatively correlated ($\rho=-0.42$, $p<0.001$),
+and across all 270 concrete chains weakly so ($\rho=-0.18$). In this
+domain the metric points the wrong way.
+
+Thinking mode has a domain-specific cost that the similarity score hides.
+With thinking on, similarity rises on every model (to 0.77--0.87), genre
+drift disappears on the Qwen3.8 models, and the numbers still survive
+(0.88--1.00); but the exclusions clause is dropped in 60--80\% of
+short-document chains (retention 0.87 to 0.40 on Qwen3.6-35B, 0.80 to 0.20
+on Qwen3.8-27B, 0.67 to 0.27 on Flash-Next). The reasoning pass tidies the
+document and deletes the one line whose absence changes what the reader
+would bid. The Ultra-Constrained Fidelity prompt, by contrast, gives 0.96
+and 0.98 with every number, every exclusion and no reframing.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.42\textheight,keepaspectratio]{../results/paper3_figures/fig10_concrete.png}
+\caption{Construction statements of work: final similarity, numeric-token
+  survival, inflation, exclusion retention and genre drift, thinking off and
+  on; the six domain-neutral prompts on host B; and similarity against
+  numeric survival per chain.}
+\label{fig:concrete}
+\end{figure}
+
+\input{tables/table7_concrete}
+
+\subsection{Sixteen domains: what survives and what the metric sees}
+\label{sec:breadth}
+
+Table~\ref{tab:paper3-breadth}, Table~\ref{tab:paper3-facttype} and
+Figure~\ref{fig:breadth} give the breadth experiment on Qwen3.6-35B at 30
+samples per domain. Final similarity is remarkably insensitive to domain,
+spanning only 0.72 (literary prose) to 0.86 (discharge instructions), all
+below the lasagna recipe's 0.90. Anchor-fact survival spans three times that
+range: 0.30 for the laboratory protocol and 0.33 for literary prose, 0.43
+for the change order and 0.49 for the financial summary, up to 0.91--0.93
+for the travel itinerary, construction RFI and contract clause. At chain
+level similarity and survival correlate at $\rho=0.32$; at domain level at
+0.37 with an interval including zero. The laboratory protocol keeps 30\% of
+its facts at similarity 0.81; the contract clause keeps 93\% at 0.84. A
+score of 0.8 can mean that the document is intact or that most of what it
+said is gone.
+
+The domain ranking is real: it replicates across hosts at $\rho=0.95$ on
+both metrics and transfers to Flash-Next at 0.77--0.78. By fact type
+(Table~\ref{tab:paper3-facttype}), identifiers (0.81) and names (0.80)
+survive best, numbers with units worse (0.63), and dates worst of all
+(0.35): the financial summary lost every date in every chain and the change
+order kept 13\%. Meta-commentary framing is present in 70--97\% of final
+outputs in every domain, inflation runs 1.1--1.9 fold, and 53--93\% of chains
+end locked.
+
+Thinking on has no net effect across domains (0.772 against 0.792,
+$p=0.29$) but reduces anchor survival (0.60 against 0.68) and is
+destructive on the two domains where it matters most, literary prose
+($-0.20$) and the recipe ($-0.15$). The Ultra-Constrained Fidelity prompt,
+one domain-neutral sentence, raises similarity to 0.95 and anchor survival
+to 0.97 across the sixteen domains, improving every one of them
+($p<10^{-6}$), with inflation 1.05 and meta-commentary in 6\% of outputs. A
+30-step paraphrase chain on this model is close to lossless in every domain
+tested when told, in plain terms, to be.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.48\textheight,keepaspectratio]{../results/paper3_figures/fig11_breadth.png}
+\caption{Sixteen domains on Qwen3.6-35B (30 samples per domain, both
+  hosts) and Flash-Next (5). (a) Final similarity and anchor-fact survival
+  per domain. (b) Similarity against survival per chain. (c) Survival by
+  fact type. (d) Thinking off, thinking on, and the fidelity prompt per
+  domain.}
+\label{fig:breadth}
+\end{figure}
+
+\input{tables/table8_breadth_domain}
+
+\input{tables/table9_breadth_facttype}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.3\textheight,keepaspectratio]{../results/paper3_figures/fig12_inflation_meta.png}
+\caption{Word-count inflation and meta-commentary rate across every
+  baseline condition: recipes, statements of work and the sixteen domains.}
+\label{fig:inflation}
+\end{figure}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the similarity score measures.}
+Three results converge. On the recipes, the short stimulus drifts far more
+than the long one while inflating five- to seven-fold and acquiring
+framing in nearly every chain. On the statements of work, similarity is
+anti-correlated with the survival of the numbers. Across sixteen domains,
+similarity varies by 0.14 while fact survival varies by 0.63, and the two
+are only weakly related. Cosine similarity to the original, the metric of
+Paper~A and of most of the iterated-generation literature, responds first
+to length and genre change and only secondarily to information loss.
+\citet{belem2026certainty} found one axis of change it cannot see;
+Figure~\ref{fig:inflation} shows that it over-reads another. The
+quantitative claims of Paper~A about which model drifts least survive
+this---rankings replicate across metrics at $\rho\approx0.8$ where we can
+compare them---but the interpretation of a value of 0.75 as ``25\% of the
+meaning lost'' does not. We recommend that iterated-generation studies
+report a fact-survival measure beside any embedding score, and we release
+every chain's text so that they can.
+
+\paragraph{The hierarchy, revised again.}
+Paper~A ordered the factors governing drift as model family, then size to a
+threshold, then a discrete failure mode, then quantization format, then
+temperature and KV precision, with prompts as a multiplier. On the newer
+generations the ordering within a deployed model is: thinking mode (0.03--
+0.30, sign by model) and system prompt (0.24--0.43 spread) at the top,
+format-and-stack next (0 to 0.16), and temperature, seed and speculative
+decoding at or below the 0.05 noise floor. The two largest levers are the
+two that a pipeline designer sets in software after the model is chosen,
+and both are cheap to test at fifteen samples on these models.
+
+\paragraph{Reasoning models in loops.}
+The thinking results are, we think, the most consequential for practice. A
+reasoning pass makes Qwen3.8 a better paraphraser and Qwen3.6 a worse one;
+it prevents the copying attractor that otherwise ends most chains, so a
+loop containing a reasoning model does not settle; it deletes a bidder's
+exclusions clause in most short statements of work while raising the
+similarity score; and on the previous generation it consumed the entire
+generation budget in a seventh of all chains. None of these effects is
+visible in a single-pass benchmark, and none is predictable from the model's
+single-pass quality. A pipeline that iterates over a reasoning model should
+be tested as a loop, with thinking on and off, on its own documents, with
+a fact-level check.
+
+\paragraph{Recommendations.}
+\begin{enumerate}[leftmargin=*]
+  \item Report iterated-generation results as samples, never as seeded
+        replicates; fifteen chains per condition is a practical minimum.
+  \item Test thinking mode in both states on the deployed model and
+        stimulus; do not assume its sign.
+  \item Use a fidelity instruction. One sentence lifted every domain tested
+        to 0.88--0.98 with 97\% of facts intact.
+  \item Measure fact survival, and check dates and quantities specifically;
+        they are the first things lost.
+  \item Do not spend effort on seeds, greedy decoding or speculative
+        decoding as drift controls; they do not change the outcome.
+  \item Benchmark the exact build and stack; the format effect is real on
+        one of two models and absent on the other.
+\end{enumerate}
+
+\paragraph{Limitations.}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{One family, four models.} Every configuration is a Qwen
+        instruct model. The cross-generation trend is a within-family
+        observation, and the Qwen3.5 anchors on the short stimulus rest on
+        two or three clean chains.
+  \item \textbf{Format confounds.} The GGUF arm differs from the NVFP4 arm
+        in quantization, server, KV precision and GPU generation; the
+        contrast bounds their combined effect.
+  \item \textbf{Anchor facts are hand-chosen.} Ten per domain, chosen by the
+        author to be checkable; survival is a lower bound on preservation
+        (a paraphrased number counts as lost) and the domain prompts are
+        synthetic documents rather than sampled ones.
+  \item \textbf{Meta-commentary and genre drift are regex measures}, tuned
+        on the outputs of these models; they will need re-tuning for others.
+  \item \textbf{Small $n$ in places.} Thinking-on breadth and the fidelity
+        prompt use five samples per domain; the 100-iteration thinking runs
+        on the Qwen3.8 models use five chains; the Qwen3.5 anchors are as
+        stated above.
+  \item \textbf{Reasoning-token counts are estimated} for all but one
+        deployment, from completion tokens minus the returned text, because
+        only one server reported them.
+  \item \textbf{Single embedding model.} We did not repeat the second-
+        embedder validation of Paper~A; the fact-survival metrics are the
+        validation this paper offers instead.
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Fast local inference let us replace assumptions with measurements. Seeds do
+not reproduce chains, so drift is a distribution; we measured it at fifteen
+to thirty chains per condition on eight configurations of four Qwen models.
+Thinking mode is the largest and least predictable factor, and reasoning
+models do not settle in a loop. Speculative decoding, greedy decoding and
+seeds change nothing. System-prompt rankings are stable and transferable
+within a generation, and one fidelity sentence makes a thirty-step chain
+nearly lossless in sixteen domains. Most chains end by copying their input
+verbatim. And the cosine-similarity score that this line of work has relied
+on responds to length and genre far more than to the facts a document
+carries, which are what a downstream reader needs: dates first, quantities
+next, names and identifiers last. The chain texts are released with this
+paper so that better measures can be applied to them.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\clearpage
+\appendix
+
+\section{Stimuli}
+\label{app:prompts}
+
+\subsection{Recipes}
+The two recipes are those of Paper~A. \textbf{Spaghetti}: ``Step 1: Boil
+water. Step 2: Add pasta for 8 minutes. Step 3: Drain and serve with
+sauce.'' \textbf{Lasagna}: the 21-step beef lasagna recipe of Paper~A,
+Appendix~A, sent with steps 12--17 compressed into one line, exactly as in
+that paper.
+
+\input{tables/appendix_prompts}
+
+\section{Additional figures}
+\label{app:figures}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.4\textheight,keepaspectratio]{../results/paper3_figures/figA1_baseline_per_chain.png}
+\caption{Per-chain baseline trajectories for every configuration.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth,height=0.4\textheight,keepaspectratio]{../results/paper3_figures/figA2_thinking_per_chain.png}
+\caption{Per-chain trajectories with thinking on.}
+\end{figure}
+
+\section{Reproducibility and compute}
+\label{app:compute}
+
+\paragraph{Hardware.}
+Qwen3.6-35B NVFP4 was served by vLLM on one NVIDIA RTX~5090 (32\,GB) on
+each of two machines (hosts A and B). Qwen3.8-27B NVFP4 was served by vLLM
+with tensor parallelism across two NVIDIA RTX~5070~Ti (16\,GB each).
+Qwen3.8-Flash-Next NVFP4 was served by SGLang on one NVIDIA RTX~PRO~6000
+Blackwell (96\,GB). All GGUF builds were served by llama.cpp with tensor
+splitting across two NVIDIA Quadro P5000 (16\,GB each), one model resident
+at a time. Embeddings were computed by Qwen3-Embedding-0.6B served by vLLM
+on an RTX~5070~Ti. The GGUF runs of Paper~A used Ollama on the RTX~PRO~6000;
+the change of server and GPU generation between the two papers' GGUF arms
+is part of the format-and-stack confound noted in
+Section~\ref{sec:format}.
+
+\paragraph{Software.}
+vLLM (NVFP4 builds; FlashInfer MoE backend, fp8 KV cache, prefix caching,
+reasoning parser \texttt{qwen3}, thinking disabled by default and enabled
+per request via \texttt{chat\_template\_kwargs}), SGLang (Flash-Next;
+ModelOpt FP4, reasoning parser \texttt{auto}), llama.cpp router (GGUF;
+q8\_0 KV cache, reasoning off; \texttt{draft-mtp} with draft length 2 for
+the MTP arm). The generation budget was 16{,}384 tokens and the request
+timeout 600\,s throughout.
+
+\paragraph{Scale.}
+2{,}662 chains, 85{,}460 model calls, run between 6 and 7 September 2026;
+the Blackwell-hosted conditions completed in under 24 hours of wall-clock
+time and the llama.cpp conditions in a further 16 hours.
+
+\paragraph{Availability.}
+The runner, the analysis script that produces every figure and table here,
+the prompt files with their anchors, and the full per-iteration chain
+texts are at \url{https://github.com/jhsmith409/telephone-semantic-drift},
+with the chain data attached to the repository's data release as a
+checksummed archive.
+
+\end{document}

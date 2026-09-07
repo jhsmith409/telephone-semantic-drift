@@ -12,8 +12,9 @@ trajectory tells you whether a model/serving configuration converges to a stable
 fixed point, decays slowly, or runs away into unrelated content.
 
 The repository covers model architecture and scale, quantization format, serving
-backend, sampling temperature, system-prompt engineering, and (in the current
-Paper 3 work) knowledge domain and thinking mode.
+backend, sampling temperature, system-prompt engineering, and (in Paper B)
+run-to-run reproducibility, reasoning ("thinking") mode, speculative decoding,
+knowledge domain, and whether cosine similarity tracks factual survival at all.
 
 ## Papers
 
@@ -21,13 +22,40 @@ Paper 3 work) knowledge domain and thinking mode.
 | --- | --- |
 | `paper/` | **Paper A** — *Semantic Drift in Iterated LLM Paraphrase Chains: Model Architecture, Scale, Quantization, Serving Infrastructure, and Prompt Engineering.* The current, consolidated paper. Sources: `paper/main.tex`, `paper/references.bib`, `paper/tables/*.tex`, compiled `paper/main.pdf`. |
 | `paper2/` | Archival source for the earlier Qwen3.5-family paper, **merged into `paper/`**. Kept for provenance; not maintained. |
-| `paper3/` | Working material for the in-progress follow-up (`moved_from_paper2.tex`). |
+| `paper3/` | **Paper B** — *Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains.* Sources: `paper3/main.tex`, `paper3/references.bib`, `paper3/tables/*.tex`, compiled `paper3/main.pdf`. |
 
 Build a paper with `latexmk`:
 
 ```bash
 cd paper && latexmk -pdf main.tex
 ```
+
+### Paper B
+
+**Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode,
+Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains**
+(`paper3/main.tex`) extends the study to the Qwen3.6 and Qwen3.8 generations.
+Across 2,662 completed chains and 85,460 model calls on eight configurations
+served by vLLM, SGLang and llama.cpp, it asks whether a sampling seed reproduces
+a chain at all (it does not, even at temperature 0), what reasoning ("thinking")
+mode does to drift, whether speculative decoding changes it, how drift behaves
+across sixteen knowledge domains, and whether cosine similarity actually tracks
+the loss of information practitioners care about (it tracks genre and length
+change far more).
+
+Build it, and regenerate its figures and tables, with:
+
+```bash
+uv run python scripts/analyze_paper3.py   # -> results/paper3_figures/, paper3/tables/
+cd paper3 && latexmk -pdf main.tex
+```
+
+`scripts/analyze_paper3.py` reads `results/paper3/<label>/*.json` plus the Paper A
+anchor datasets, so unpack the data archive at the repository root first (see
+[`results/README.md`](results/README.md)) and run it from the repository root.
+It also writes `results/paper3_figures/all_stats.json` (every statistic quoted in
+the paper) and `results/paper3_figures/summary_for_text.md` (a human-readable
+digest, including the data anomalies it detected).
 
 ## Repository layout
 
@@ -36,6 +64,7 @@ src/telephone/       Flask web app + batch API (the chain engine)
 tests/               pytest suite for the app
 scripts/paper3/      current experiment runner (run.py, common.py, prompt sets)
 scripts/analyze_paper.py         Paper A analysis: figures + tables
+scripts/analyze_paper3.py        Paper B analysis: figures + tables
 scripts/analyze_qwen35_paper.py  Qwen3.5 analysis: figures + tables
 scripts/legacy/      Paper 1/2 run scripts (see scripts/legacy/README.md)
 paper/ paper2/ paper3/           LaTeX sources
@@ -105,6 +134,7 @@ the repository root after unpacking the data archive (see `results/README.md`):
 
 ```bash
 uv run python scripts/analyze_paper.py         # -> results/paper_figures/, paper/tables/
+uv run python scripts/analyze_paper3.py        # -> results/paper3_figures/, paper3/tables/
 uv run python scripts/analyze_qwen35_paper.py  # -> results/qwen35_paper_figures/, paper2/tables/
 ```
 
@@ -114,7 +144,9 @@ Then recompile the papers with `latexmk -pdf main.tex`.
 
 `results/` in this repository carries only the published figures and the embedding
 validation statistics. The **full chain data — every iteration's input and output
-text for every condition — is ~1 GB and is attached to the GitHub Release**; see
+text for every condition — is ~970 MB and is attached to the GitHub Release
+[`v1.1-data`](https://github.com/jhsmith409/telephone-semantic-drift/releases/tag/v1.1-data)**,
+which supersedes `v1.0-data` and adds the complete Paper B runs. See
 [`results/README.md`](results/README.md) for the download and checksum.
 
 ## A note on hostnames

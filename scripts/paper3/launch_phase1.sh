@@ -58,5 +58,5 @@ nohup bash -c "
   $RUN --label qwen3.8-27b-q4kxl-mtp --exp baseline --recipes spaghetti --workers 1
   $RUN --label qwen3.8-27b-q4kxl     --exp baseline --recipes lasagna   --workers 1
   $RUN --label qwen3.8-27b-q4kxl-mtp --exp baseline --recipes lasagna   --workers 1
-" > "$RES/gpu_host_b_phase1.log" 2>&1 &
-echo "gpu-host-b   (qwen3.8-27b + mtp)      PID $!  log $RES/gpu_host_b_phase1.log"
+" > "$RES/gpu-host-b_phase1.log" 2>&1 &
+echo "gpu-host-b   (qwen3.8-27b + mtp)      PID $!  log $RES/gpu-host-b_phase1.log"

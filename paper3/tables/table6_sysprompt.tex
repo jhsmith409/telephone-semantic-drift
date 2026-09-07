@@ -1,0 +1,61 @@
+\begin{table}[t]
+\centering
+\caption{System-prompt sensitivity. Spread is the best minus the worst prompt mean
+for that configuration and recipe; ``chains'' is the number of independent chains
+behind each prompt mean. The lower block gives the
+Spearman rank correlation of prompt orderings between every pair of
+configuration$\times$recipe cells, with bootstrap 95\% CIs.}
+\label{tab:paper3-sysprompt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrll}
+\toprule
+Configuration & Recipe & prompts & chains & Spread & Best prompt & Worst prompt \\
+\midrule
+3.6-35B (A) & spaghetti & 20 & 10 & 0.306 & 100\% Fidelity (0.971) & Visual Tutorial Style (0.665) \\
+3.6-35B (A) & lasagna & 20 & 5 & 0.323 & 100\% Fidelity (0.968) & Multimodal Visual Focus (0.645) \\
+3.6-35B (B) & spaghetti & 20 & 5 & 0.298 & Ultra-Constrained Fidelity (0.967) & Visual Tutorial Style (0.669) \\
+3.6-35B (B) & lasagna & 20 & 5 & 0.284 & Precise Transmitter (0.966) & Visual Tutorial Style (0.682) \\
+3.8-27B & spaghetti & 20 & 5 & 0.266 & Zero Fluff (0.937) & Baseline - None (0.672) \\
+3.8-27B & lasagna & 20 & 5 & 0.238 & Balanced Clarity (0.965) & Multimodal Visual Focus (0.727) \\
+Flash-Next & spaghetti & 20 & 5 & 0.379 & Ultra-Constrained Fidelity (0.950) & Visual Tutorial Style (0.572) \\
+Flash-Next & lasagna & 20 & 5 & 0.429 & 100\% Fidelity (0.945) & Visual Tutorial Style (0.516) \\
+\bottomrule
+\end{tabular}}
+
+\vspace{1em}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrlr}
+\toprule
+Pair & $n$ prompts & $\rho$ & 95\% CI & $p$ \\
+\midrule
+3.6-35B (A) spag vs 3.6-35B (A) lasa & 20 & 0.58 & [0.12, 0.86] & 0.0077 \\
+3.6-35B (A) spag vs 3.6-35B (B) spag & 20 & 0.98 & [0.91, 1.00] & $<$0.0001 \\
+3.6-35B (A) spag vs 3.6-35B (B) lasa & 20 & 0.56 & [0.15, 0.87] & 0.0103 \\
+3.6-35B (A) spag vs 3.8-27B spag & 20 & 0.83 & [0.55, 0.94] & $<$0.0001 \\
+3.6-35B (A) spag vs 3.8-27B lasa & 20 & 0.21 & [-0.31, 0.68] & 0.3695 \\
+3.6-35B (A) spag vs Flash-Next spag & 20 & 0.90 & [0.68, 0.97] & $<$0.0001 \\
+3.6-35B (A) spag vs Flash-Next lasa & 20 & 0.15 & [-0.42, 0.62] & 0.5352 \\
+3.6-35B (A) lasa vs 3.6-35B (B) spag & 20 & 0.56 & [0.10, 0.84] & 0.0106 \\
+3.6-35B (A) lasa vs 3.6-35B (B) lasa & 20 & 0.95 & [0.82, 0.98] & $<$0.0001 \\
+3.6-35B (A) lasa vs 3.8-27B spag & 20 & 0.39 & [-0.09, 0.74] & 0.0923 \\
+3.6-35B (A) lasa vs 3.8-27B lasa & 20 & 0.70 & [0.37, 0.88] & 0.0006 \\
+3.6-35B (A) lasa vs Flash-Next spag & 20 & 0.49 & [-0.04, 0.82] & 0.0277 \\
+3.6-35B (A) lasa vs Flash-Next lasa & 20 & 0.50 & [-0.06, 0.85] & 0.0261 \\
+3.6-35B (B) spag vs 3.6-35B (B) lasa & 20 & 0.56 & [0.12, 0.86] & 0.0096 \\
+3.6-35B (B) spag vs 3.8-27B spag & 20 & 0.83 & [0.56, 0.93] & $<$0.0001 \\
+3.6-35B (B) spag vs 3.8-27B lasa & 20 & 0.24 & [-0.29, 0.67] & 0.3038 \\
+3.6-35B (B) spag vs Flash-Next spag & 20 & 0.91 & [0.71, 0.98] & $<$0.0001 \\
+3.6-35B (B) spag vs Flash-Next lasa & 20 & 0.17 & [-0.40, 0.66] & 0.4818 \\
+3.6-35B (B) lasa vs 3.8-27B spag & 20 & 0.47 & [-0.02, 0.80] & 0.0369 \\
+3.6-35B (B) lasa vs 3.8-27B lasa & 20 & 0.76 & [0.47, 0.89] & 0.0001 \\
+3.6-35B (B) lasa vs Flash-Next spag & 20 & 0.54 & [0.05, 0.88] & 0.0140 \\
+3.6-35B (B) lasa vs Flash-Next lasa & 20 & 0.54 & [0.06, 0.88] & 0.0137 \\
+3.8-27B spag vs 3.8-27B lasa & 20 & 0.25 & [-0.25, 0.67] & 0.2855 \\
+3.8-27B spag vs Flash-Next spag & 20 & 0.84 & [0.61, 0.93] & $<$0.0001 \\
+3.8-27B spag vs Flash-Next lasa & 20 & 0.21 & [-0.32, 0.63] & 0.3660 \\
+3.8-27B lasa vs Flash-Next spag & 20 & 0.37 & [-0.13, 0.77] & 0.1053 \\
+3.8-27B lasa vs Flash-Next lasa & 20 & 0.88 & [0.67, 0.97] & $<$0.0001 \\
+Flash-Next spag vs Flash-Next lasa & 20 & 0.33 & [-0.23, 0.74] & 0.1582 \\
+\bottomrule
+\end{tabular}}
+\end{table}

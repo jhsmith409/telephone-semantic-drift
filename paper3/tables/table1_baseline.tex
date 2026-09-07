@@ -1,0 +1,30 @@
+\begin{table}[t]
+\centering
+\caption{Baseline drift at iteration 30 (T=0.7, no system prompt, thinking OFF).
+Means over independent chains with percentile bootstrap 95\% CIs ($B$=10{,}000).
+Locked = last three outputs byte-identical; inflation = final output words divided
+by prompt words; meta = final output contains agent-handoff / meta-commentary
+markers. The two Qwen3.6-35B NVFP4 hosts are pooled.}
+\label{tab:paper3-baseline}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrlrrrr}
+\toprule
+Configuration & Recipe & Mean & 95\% CI & $n$ & Locked & Inflation & Meta \\
+\midrule
+Qwen3.6-35B NVFP4 & Spaghetti & 0.736 & [0.703, 0.763] & 30 & 0.87 & 5.64 & 1.00 \\
+Qwen3.6-35B NVFP4 & Lasagna & 0.896 & [0.878, 0.910] & 30 & 0.87 & 1.02 & 0.83 \\
+Qwen3.8-27B NVFP4 & Spaghetti & 0.582 & [0.458, 0.690] & 15 & 0.93 & 7.21 & 1.00 \\
+Qwen3.8-27B NVFP4 & Lasagna & 0.905 & [0.891, 0.919] & 15 & 0.93 & 1.05 & 0.87 \\
+Qwen3.8-Flash-Next NVFP4 & Spaghetti & 0.731 & [0.675, 0.777] & 15 & 0.20 & 5.71 & 0.80 \\
+Qwen3.8-Flash-Next NVFP4 & Lasagna & 0.876 & [0.859, 0.892] & 15 & 0.00 & 1.03 & 0.60 \\
+Qwen3.6-35B GGUF & Spaghetti & 0.576 & [0.472, 0.668] & 15 & 0.73 & 6.83 & 1.00 \\
+Qwen3.6-35B GGUF & Lasagna & 0.847 & [0.810, 0.876] & 15 & 0.93 & 0.96 & 0.80 \\
+Qwen3.6-27B GGUF & Spaghetti & 0.680 & [0.629, 0.726] & 15 & 0.93 & 7.19 & 1.00 \\
+Qwen3.6-27B GGUF & Lasagna & 0.889 & [0.873, 0.905] & 15 & 1.00 & 1.01 & 0.87 \\
+Qwen3.8-27B GGUF & Spaghetti & 0.594 & [0.481, 0.695] & 15 & 0.60 & 6.17 & 0.93 \\
+Qwen3.8-27B GGUF & Lasagna & 0.878 & [0.863, 0.891] & 15 & 0.87 & 1.10 & 1.00 \\
+Qwen3.8-27B GGUF+MTP & Spaghetti & 0.532 & [0.411, 0.648] & 15 & 0.73 & 6.85 & 0.93 \\
+Qwen3.8-27B GGUF+MTP & Lasagna & 0.897 & [0.885, 0.909] & 15 & 0.80 & 1.07 & 0.87 \\
+\bottomrule
+\end{tabular}}
+\end{table}
