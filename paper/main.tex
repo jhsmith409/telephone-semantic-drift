@@ -651,7 +651,12 @@ penalties came from each server's defaults, which differ across the three
 stacks, and the Qwen model cards recommend top-$k$ 20, top-$p$ 0.95 and a
 presence penalty of 0--2 in thinking mode precisely to prevent endless
 repetition. The rates below should be read as properties of reasoning-enabled
-Qwen3.5 under each stack's default sampler. Within the Ollama sweep the rate
+Qwen3.5 under each stack's default sampler. The companion paper tests the
+sampler directly on the following generation and finds that adding the
+vendor-recommended presence penalty of 1.5 eliminates the failure (0 of 15
+chains against 8 of 15) while removing top-$k$ and top-$p$ does not, so the
+stack differences here are most plausibly differences in default sampling
+of the reasoning block. Within the Ollama sweep the rate
 then follows size and precision (Table~\ref{tab:runaway}): both 0.8B builds fail
 in 80--100\% of chains on either recipe; the 2B builds fail in 20--80\%; and
 above 4B only the Q4\_K\_M builds fail, at 40\% (27B) and 50\% (35B MoE) on

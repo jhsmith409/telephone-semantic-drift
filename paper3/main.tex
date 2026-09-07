@@ -43,8 +43,8 @@ questions the earlier work could not: whether a sampling seed reproduces a
 chain at all, what reasoning (``thinking'') mode does to drift, whether
 speculative decoding changes it, how prompts and drift behave across sixteen
 knowledge domains, and whether embedding similarity measures the loss of
-information that practitioners care about. Across 2{,}662 completed chains
-and 85{,}460 model calls on eight configurations served by vLLM, SGLang and
+information that practitioners care about. Across 2{,}717 completed chains
+and 87{,}110 model calls on eight configurations served by vLLM, SGLang and
 llama.cpp, we find:
 (1)~seeds do not pin chains on any of these stacks---identical requests
 diverge at the first token even at temperature~0 and even with one request in
@@ -54,7 +54,9 @@ chains per condition;
 Qwen3.6-35B up to 0.16 in final similarity and never reaching a fixed point
 over 100 iterations, while lifting Qwen3.8-27B from 0.58 to 0.88 on the short
 stimulus; no system prompt rescues the model it hurts, and it retains the
-runaway-thinking failure of the previous generation at a low rate;
+runaway-thinking failure of the previous generation at a low rate---a
+failure that a presence penalty of 1.5 in the sampler eliminates entirely
+without changing the output otherwise;
 (3)~multi-token-prediction speculative decoding leaves drift unchanged, and
 temperature~0 narrows the spread without changing the mean;
 (4)~system-prompt rankings replicate across hosts ($\rho=0.95$--$0.98$) and
@@ -287,8 +289,16 @@ All conditions use 15 samples unless stated; a sample is one chain. Table
         Qwen3.6-35B (15 samples per host, pooled to 30) and Flash-Next (5),
         with thinking on (host B, 5) and with the Ultra-Constrained Fidelity
         prompt (host A, 5).
+  \item \textbf{Sampler}: Qwen3.6-35B on host A with thinking on, lasagna with
+        the Visual Tutorial Style prompt (the condition with the highest
+        token-cap rate), 15 samples under each of three samplers: the server
+        default (top-$k$ 20, top-$p$ 0.95, no penalty, read from the model
+        card), a bare sampler (top-$k$ off, top-$p$ 1.0, no penalty) and the
+        vendor's thinking-mode recommendation (top-$k$ 20, top-$p$ 0.95,
+        presence penalty 1.5); plus the bare sampler on plain spaghetti as a
+        control.
 \end{enumerate}
-In total 2{,}662 chains and 85{,}460 model calls completed with no API
+In total 2{,}717 chains and 87{,}110 model calls completed with no API
 errors. Every thinking-off chain produced text at every iteration; the
 empty completions in the thinking-on conditions are analysed in
 Section~\ref{sec:thinking}.
@@ -476,6 +486,27 @@ order of magnitude in the following generation and removed in the one after,
 but it has not disappeared, and the prompts that trigger it (Visual
 Tutorial Style, Friendly Conversational, Multimodal Visual Focus) are the
 verbose ones rather than, as in Qwen3.5, the constraining ones.
+
+\paragraph{The sampler controls it.}
+Paper~A could not separate the serving stack from the sampling defaults each
+stack applies, because its requests set only temperature and seed. We
+therefore took the worst condition above---Visual Tutorial Style on
+lasagna, where the server default sampler hit the token cap in 8 of 15
+chains---and reran it under two explicit samplers. With top-$k$ and top-$p$
+removed (a bare sampler) the cap was hit in 5 of 15 chains, not
+distinguishable from the default ($p=0.46$, Fisher). With the vendor's
+recommended thinking-mode sampler, which adds a presence penalty of 1.5, the
+cap was hit in 0 of 15 chains ($p=0.002$ against the default, $p=0.04$
+against the bare sampler), the longest single reply fell from the 16{,}384
+cap to 14{,}225 tokens, and mean reply length fell by 8\%. Final similarity
+was unchanged (0.56, 0.58, 0.59; $p=0.74$). The bare sampler on plain
+spaghetti, where the default rate is zero, stayed at zero. Runaway thinking
+is therefore not a property of a serving stack but of sampling the reasoning
+block without a repetition control, which is exactly the setting the Qwen
+model cards warn against; a presence penalty removes the failure without
+changing what the model produces when it does answer. The stack differences
+Paper~A reported are best read as differences in default samplers between
+deployments that had reasoning enabled.
 
 \subsection{Serving format, stack, and speculative decoding}
 \label{sec:format}
@@ -787,6 +818,11 @@ a fact-level check.
         prompt use five samples per domain; the 100-iteration thinking runs
         on the Qwen3.8 models use five chains; the Qwen3.5 anchors are as
         stated above.
+  \item \textbf{The sampler result is one model and one condition.} The
+        presence-penalty effect was measured on Qwen3.6-35B at the single
+        prompt with the highest token-cap rate; we expect it to generalise
+        because the mechanism is repetition inside the reasoning block, but
+        have not shown it on Qwen3.5 or on the other stacks.
   \item \textbf{Reasoning-token counts are estimated} for all but one
         deployment, from completion tokens minus the returned text, because
         only one server reported them.
@@ -871,7 +907,7 @@ the MTP arm). The generation budget was 16{,}384 tokens and the request
 timeout 600\,s throughout.
 
 \paragraph{Scale.}
-2{,}662 chains, 85{,}460 model calls, run between 6 and 7 September 2026;
+2{,}717 chains, 87{,}110 model calls, run between 6 and 7 September 2026;
 the Blackwell-hosted conditions completed in under 24 hours of wall-clock
 time and the llama.cpp conditions in a further 16 hours.
 

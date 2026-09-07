@@ -194,6 +194,19 @@ def _call_model(
     if thinking:
         kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": True}}
 
+    # Optional sampler override for the sampler A/B experiment: JSON in
+    # PAPER3_SAMPLER, e.g. {"top_p": 0.95, "top_k": 20, "presence_penalty": 1.5}.
+    # Native OpenAI fields go on the request; vLLM-only fields go in extra_body.
+    _smp = os.environ.get("PAPER3_SAMPLER")
+    if _smp:
+        _smp = json.loads(_smp)
+        for k in ("top_p", "presence_penalty", "frequency_penalty"):
+            if k in _smp:
+                kwargs[k] = _smp[k]
+        _extra = {k: v for k, v in _smp.items() if k in ("top_k", "min_p", "repetition_penalty")}
+        if _extra:
+            kwargs.setdefault("extra_body", {}).update(_extra)
+
     return get_client(ep).chat.completions.create(**kwargs)
 
 
