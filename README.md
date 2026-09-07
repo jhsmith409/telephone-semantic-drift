@@ -20,21 +20,21 @@ knowledge domain, and whether cosine similarity tracks factual survival at all.
 
 | Path | Paper |
 | --- | --- |
-| `paper/` | **Paper A** — *Semantic Drift in Iterated LLM Paraphrase Chains: Model Architecture, Scale, Quantization, Serving Infrastructure, and Prompt Engineering.* The current, consolidated paper. Sources: `paper/main.tex`, `paper/references.bib`, `paper/tables/*.tex`, compiled `paper/main.pdf`. |
+| `paper/` | **Paper A** — *Semantic Drift in Iterated LLM Paraphrase Chains: Model Architecture, Scale, Quantization, Serving Infrastructure, and Prompt Engineering.* The current, consolidated paper. Sources: `paper/semantic-drift-iterated-paraphrase-chains.tex`, `paper/references.bib`, `paper/tables/*.tex`, compiled `paper/semantic-drift-iterated-paraphrase-chains.pdf`. |
 | `paper2/` | Archival source for the earlier Qwen3.5-family paper, **merged into `paper/`**. Kept for provenance; not maintained. |
-| `paper3/` | **Paper B** — *Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains.* Sources: `paper3/main.tex`, `paper3/references.bib`, `paper3/tables/*.tex`, compiled `paper3/main.pdf`. |
+| `paper3/` | **Paper B** — *Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains.* Sources: `paper3/semantic-drift-across-qwen-generations.tex`, `paper3/references.bib`, `paper3/tables/*.tex`, compiled `paper3/semantic-drift-across-qwen-generations.pdf`. |
 
 Build a paper with `latexmk`:
 
 ```bash
-cd paper && latexmk -pdf main.tex
+cd paper && latexmk -pdf semantic-drift-iterated-paraphrase-chains.tex
 ```
 
 ### Paper B
 
 **Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode,
 Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains**
-(`paper3/main.tex`) extends the study to the Qwen3.6 and Qwen3.8 generations.
+(`paper3/semantic-drift-across-qwen-generations.tex`) extends the study to the Qwen3.6 and Qwen3.8 generations.
 Across 2,662 completed chains and 85,460 model calls on eight configurations
 served by vLLM, SGLang and llama.cpp, it asks whether a sampling seed reproduces
 a chain at all (it does not, even at temperature 0), what reasoning ("thinking")
@@ -47,7 +47,7 @@ Build it, and regenerate its figures and tables, with:
 
 ```bash
 uv run python scripts/analyze_paper3.py   # -> results/paper3_figures/, paper3/tables/
-cd paper3 && latexmk -pdf main.tex
+cd paper3 && latexmk -pdf semantic-drift-iterated-paraphrase-chains.tex
 ```
 
 `scripts/analyze_paper3.py` reads `results/paper3/<label>/*.json` plus the Paper A
@@ -138,7 +138,7 @@ uv run python scripts/analyze_paper3.py        # -> results/paper3_figures/, pap
 uv run python scripts/analyze_qwen35_paper.py  # -> results/qwen35_paper_figures/, paper2/tables/
 ```
 
-Then recompile the papers with `latexmk -pdf main.tex`.
+Then recompile the papers with `latexmk -pdf semantic-drift-iterated-paraphrase-chains.tex`.
 
 ## Data
 
