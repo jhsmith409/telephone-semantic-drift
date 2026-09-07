@@ -59,9 +59,10 @@ temperatures, and the same 20 system prompts on six configurations plus an
 out-of-family control. Together the datasets comprise 2{,}627 completed
 30-step chains and roughly 79{,}000 scored inferences.
 We find:
-(1)~a four-tier stability hierarchy across families, with a 0.67 gap in final
-similarity between the best and worst models and catastrophic tipping-point
-failures in the weakest;
+(1)~a stability hierarchy across families---three occupied tiers on a
+four-band scale, with no model in the Degraded band---with a 0.67 gap in
+final similarity between the best and worst models and catastrophic
+tipping-point failures in the weakest;
 (2)~within one family, a capacity threshold near 4B parameters below which no
 configuration is reliable, and above which the ordering by size is irregular;
 (3)~a discrete \emph{runaway-thinking} failure mode in which a model with
@@ -71,11 +72,12 @@ affecting 15--54\% of chains on the two stacks that ran Qwen3.5 with its
 default reasoning on, concentrated in 4-bit builds, small models, the
 short stimulus, and constraining system prompts;
 (4)~4-bit quantization \emph{formats} of identical weights that differ by up
-to 0.26 on the short stimulus, while precision level is non-monotonic
-throughout;
+to 0.26 on the short stimulus among the chains that survive runaway (two to
+five per arm, with format and serving stack covarying), while precision
+level is non-monotonic throughout;
 (5)~KV-cache precision and temperature effects that are directionally mixed
-and small for stable models but large below the threshold, where
-temperature sensitivity inverts; and
+and small for stable models, while below the threshold low temperature
+raises the runaway rate to 100\% of chains; and
 (6)~system-prompt effects that range from invisible (spread $<0.01$ on the
 most stable cross-family model) to dominant (spreads of 0.3--0.7 within the
 Qwen3.5 family), with prompt rankings that transfer between some
@@ -113,7 +115,7 @@ differences) while remaining representative of the sequential processing pattern
 found in production systems.
 
 We apply that framework to two complementary datasets. The \textbf{cross-family}
-dataset varies the model itself: 17 models from six families, together with
+dataset varies the model itself: 17 models from seven families, together with
 ablations over KV cache precision, sampling temperature and system prompts. It
 answers which choices matter when the model is a free variable, but it cannot
 separate family effects from size and quantization effects, because no two of its
@@ -147,8 +149,9 @@ Our contributions are:
   \item The first controlled study of KV-cache precision in iterated
         generation, finding small, directionally mixed per-model effects
         whose intervals mostly include zero (Section~\ref{sec:rq2}), and a
-        temperature ablation across both datasets showing that sensitivity
-        inverts below the capacity threshold (Section~\ref{sec:temperature}).
+        temperature ablation across both datasets showing that the apparent
+        inversion of temperature sensitivity below the capacity threshold is
+        a runaway-rate effect (Section~\ref{sec:temperature}).
   \item A system-prompt study on nine configurations showing that the prompt
         effect is itself configuration-dependent---negligible on the most
         stable model, dominant on others---and that rankings transfer only
@@ -209,25 +212,35 @@ catastrophic dynamics from the deployment side.
 
 \paragraph{Dynamical systems perspective.}
 \citet{wang2025attractor} characterize attractor cycles in iterated paraphrasing,
-where outputs oscillate between a finite set of semantically similar texts.
-\citet{chytas2025concept} formalize concept attractors as iterated function systems
-in embedding space, providing a mathematical framework for the fixed-point behaviors
-we observe.
+where outputs oscillate between a finite set of semantically similar texts;
+their principal empirical object is the period-two cycle in surface form, whereas
+the fixed points we report are plateaus of the similarity-to-origin series, a
+related but weaker notion. \citet{chytas2025concept} model the contraction of a
+model's internal layer representations toward concept attractors as an iterated
+function system; that is a statement about activations within one forward pass,
+not about output trajectories across a chain, and we cite it as the nearest
+formal treatment rather than as a model of our statistic.
 
 \paragraph{Agent drift in multi-model systems.}
-\citet{rath2026agent} analyze drift in multi-agent pipelines with heterogeneous
-models, showing that behavioral degradation compounds across agents. Our single-model
-design controls for inter-model effects, isolating the within-model drift component.
+\citet{rath2026agent} propose a theoretical framework and stability index for
+\emph{agent drift}, the progressive degradation of behaviour and coherence over
+extended multi-agent interaction, and argue that it compounds across agents. Our
+single-model design controls for inter-model effects, isolating the within-model
+drift component that any such framework must account for.
 
 \paragraph{Quantization effects on generation.}
-\citet{han2026quantization} show that quantization breaks linear scaling laws in
-multi-hop reasoning, with errors compounding across sequential generation steps.
+\citet{han2026quantization} show that the expected linear scaling of efficiency
+with bit width breaks in multi-hop reasoning---reduced precision can raise net
+energy cost while degrading accuracy---which is a warning that quantization
+behaves differently in iterated settings, though their object is energy and
+accuracy rather than semantic drift.
 \citet{hooper2024kvquant} and \citet{liu2024kivi} study KV cache quantization
 strategies, but focus on single-generation quality rather than iterative effects.
 Work on weight quantization---AWQ~\citep{lin2024awq},
-GPTQ~\citep{frantar2023gptq}, NVFP4~\citep{nvidia2025nvfp4} and the GGUF K-quant
-schemes~\citep{gerganov_llamacpp}---is likewise evaluated on single-pass
-benchmarks. Our work bridges this gap by studying how both weight and KV cache
+GPTQ~\citep{frantar2023gptq}, the NVFP4 format~\citep{nvidia2025nvfp4}, whose
+paper concerns pretraining rather than the post-training inference builds we
+serve, and the GGUF K-quant schemes~\citep{gerganov_llamacpp}---is likewise
+evaluated on single-pass benchmarks. Our work bridges this gap by studying how both weight and KV cache
 precision affect multi-iteration drift, and by comparing four 4-bit algorithms
 applied to one set of weights.
 
@@ -293,7 +306,7 @@ served by Ollama~\citep{ollama}. AWQ~\citep{lin2024awq} and
 GPTQ-Int4~\citep{frantar2023gptq} checkpoints are served by
 vLLM~\citep{kwon2023vllm}, and NVFP4~\citep{nvidia2025nvfp4} checkpoints by
 SGLang~\citep{zheng2024sglang}. The cross-family dataset covers 17 models from
-six families; its KV cache experiment uses 10 variants of
+seven families; its KV cache experiment uses 10 variants of
 Qwen3~\citep{yang2025qwen3}. The within-family dataset covers the Qwen3.5
 family~\citep{qwen2026qwen35} at 7 parameter sizes together with an
 out-of-family NVFP4 Nemotron-3-Nano-30B control. Appendix~\ref{app:models}
@@ -453,7 +466,7 @@ and the highest Catastrophic model at 0.395. The observed distribution of
 model means is therefore trimodal, with an empty gap between 0.40 and 0.60,
 and the Degraded band is retained as a definition rather than as an
 occupied category. Figure legends mark it accordingly. The gap between the
-best and worst model means exceeds 0.70---larger than the effect of any other
+best and worst model means is 0.67---larger than the effect of any other
 factor measured in this paper, and larger than the entire within-family spread
 above the stability threshold reported in Section~\ref{sec:scaling}.
 
@@ -582,7 +595,7 @@ for both recipes, and Figure~\ref{fig:q35_complexity} contrasts them across
 all 18 configurations. For models above the threshold the lasagna mean is
 consistently the lower of the two, by 0.03--0.14 (122B: 0.925 vs.\ 0.864;
 27B BF16: 0.900 vs.\ 0.855; 4B BF16: 0.885 vs.\ 0.741), the expected
-cost of carrying a 21-step context through 30 rewrites. The runaway failure
+cost of carrying the long, nominally 21-step context through 30 rewrites. The runaway failure
 mode has the opposite dependence: on the 27B and 35B Q4\_K\_M builds it
 occurs only on the 3-step spaghetti stimulus and never on lasagna, and on the
 35B NVFP4 build (Section~\ref{sec:quantformat}) the spaghetti rate is 80\%
@@ -827,7 +840,8 @@ effects of Section~\ref{sec:temperature}.
   \includegraphics[width=\textwidth,height=0.31\textheight,keepaspectratio]{../results/paper_figures/fig3_rq2_delta_bars.png}
   \caption{KV cache precision impact (fp16 $-$ q8\_0) on final similarity.
   Error bars show 95\% bootstrap CI. Green = improvement, red = regression.
-  Annotated with Wilcoxon $p$-values.}
+  Annotated with Wilcoxon $p$-values; with five pairs the smallest attainable
+  two-sided $p$ is 0.125, so the annotations are descriptive.}
   \label{fig:rq2_deltas}
 \end{figure}
 
@@ -883,16 +897,24 @@ configurations (4 Ollama GGUF, the 35B AWQ, NVFP4 and GPTQ-Int4 variants, the
 \paragraph{Size-dependent sensitivity within the family.}
 The 9B GGUF model shows remarkable temperature insensitivity: final
 similarity ranges only 0.823--0.890 across $T \in [0.0, 1.0]$ on
-spaghetti. In contrast, the 2B model shows \emph{inverted} temperature
-sensitivity on spaghetti: $T=0.0$ and $T=0.3$ both sit at the
-empty-output floor of 0.235, and similarity then rises monotonically with
-temperature (0.512 at $T=0.5$, 0.567 at $T=0.7$, 0.691 at $T=1.0$). The
-same inversion appears for the 35B MoE GGUF model, which is pinned at
-0.235 for $T \leq 0.5$ and reaches 0.899 at $T=1.0$. This
-suggests that low-temperature deterministic sampling can trap small models
-in repetitive attractor loops that the embedding model scores favorably,
-while moderate temperatures disrupt this lock-in without providing enough
-diversity to maintain content.
+spaghetti. The 2B and 35B MoE GGUF models appear at first to show
+\emph{inverted} sensitivity: their all-chain means sit at the empty-output
+floor of 0.235 at $T \leq 0.3$ (2B) and $T \leq 0.5$ (35B) and rise
+monotonically with temperature (2B: 0.512, 0.567, 0.691 at $T=0.5$, 0.7,
+1.0; 35B: 0.899 at $T=1.0$). Reading those cells through the runaway
+classification of Section~\ref{sec:runaway} shows that this is not a drift
+effect. At low temperature every chain of both models ran away---the
+runaway rate is 100\% at $T \leq 0.3$ for the 2B model and at
+$T \leq 0.5$ for the 35B MoE---and the rate falls as temperature rises (2B:
+60\%, 40\%, 0\% at $T=0.5$, 0.7, 1.0; 35B: 60\% at $T=0.7$, 0\% at
+$T=1.0$). Among the chains that do not run away, similarity is high and
+roughly flat (2B 0.93 at $T=0.5$; 35B 0.92 at $T=0.7$). Low temperature,
+in other words, makes reasoning-enabled small and 4-bit models more likely
+to loop inside the thinking block until the budget is exhausted, which is
+the behaviour the Qwen model cards warn greedy decoding produces in
+thinking mode; it does not make their paraphrases worse. Below the
+capacity threshold, temperature acts on the failure rate rather than on
+fidelity.
 
 \paragraph{Format-dependent temperature profiles.}
 The 35B AWQ model shows a qualitatively different pattern: similarity
@@ -924,7 +946,7 @@ Table~\ref{tab:sysprompt} gives the per-prompt means.
 \paragraph{Complexity threshold.}
 Figure~\ref{fig:complexity} shows that on the 3-step spaghetti recipe, all 20
 system prompts produce nearly identical drift (spread $< 0.01$ on 30B AWQ).
-On the 21-step lasagna recipe, the spread increases to $\sim$0.054, revealing
+On the long lasagna recipe (nominally 21 steps), the spread increases to $\sim$0.054, revealing
 a \emph{complexity threshold} below which prompt engineering is invisible.
 
 \paragraph{Prompt effectiveness.}
@@ -947,7 +969,7 @@ across quantization formats of one checkpoint.
   \centering
   \includegraphics[width=\textwidth,height=0.31\textheight,keepaspectratio]{../results/paper_figures/fig5_complexity_threshold.png}
   \caption{Complexity threshold: system prompts are invisible on the 3-step recipe
-  (solid bars) but differentiate on the 21-step recipe (hatched bars). 30B AWQ, 5 seeds.}
+  (solid bars) but differentiate on the long recipe, nominally 21 steps (hatched bars). 30B AWQ, 5 seeds.}
   \label{fig:complexity}
 \end{figure}
 
@@ -1008,7 +1030,7 @@ across quantization formats of one checkpoint.
 \paragraph{The complexity threshold is a property of the model, not of the
 task.}
 On the cross-family 30B AWQ model the 20 prompts are indistinguishable on the
-3-step recipe (spread 0.008) and separate only on the 21-step recipe (spread
+3-step recipe (spread 0.008) and separate only on the long recipe (spread
 0.054), the pattern Figure~\ref{fig:complexity} shows. On the cross-family
 8B model the spreads are 0.154 and 0.098, and within the Qwen3.5 family they
 are larger still and no longer ordered by recipe: 0.30--0.49 on spaghetti and
@@ -1115,8 +1137,8 @@ under 0.05 on the long one (Section~\ref{sec:quantformat}). Temperature and
 KV-cache precision are the smallest continuous factors for stable
 configurations---within 0.06 across the temperature range for the stable
 cross-family models, and KV deltas of $-0.10$ to $+0.26$ of which eight of
-ten have intervals including zero---but both grow large below the threshold,
-where temperature sensitivity inverts (Sections~\ref{sec:rq2}
+ten have intervals including zero---but below the threshold low temperature
+turns into a runaway-rate effect (Sections~\ref{sec:rq2}
 and~\ref{sec:temperature}). System prompts are the qualification. On the most
 stable model they are the smallest factor of all (spread 0.008 on the short
 recipe, 0.054 on the long one), which is the ordering the cross-family
@@ -1138,9 +1160,10 @@ and the attractor cycle dynamics of \citet{wang2025attractor}. Models with
 strong instruction-tuning (e.g., qwen3:30b-instruct) appear to have stable
 attractors near the original meaning, while weaker models' attractors lie
 far from the input distribution. The inverted temperature profiles of
-Section~\ref{sec:temperature} are the same phenomenon seen from another angle:
-at $T\leq0.3$ several small configurations lock immediately, and added sampling
-entropy is what breaks the lock.
+Section~\ref{sec:temperature} are a different phenomenon: at $T\leq0.3$ the
+small and 4-bit reasoning-enabled configurations do not lock onto an
+attractor but run away inside the thinking block, and added sampling entropy
+is what lets the reasoning terminate.
 
 \paragraph{Cross-model rank inversion.}
 The near-zero Spearman correlation between 30B and 8B prompt rankings
@@ -1182,8 +1205,10 @@ LLM system designers:
         GPTQ-Int4 are not interchangeable for drift-sensitive applications
         even at identical nominal precision; test all candidate formats on
         representative tasks.
-  \item \textbf{Profile KV cache effects.} Do not assume fp16 KV is always
-        better; test with your specific model and quantization combination.
+  \item \textbf{Do not expect KV-cache precision to rescue drift.} Its
+        per-model effects were small and mixed in sign, with eight of ten
+        intervals including zero; treat it as a throughput choice and verify
+        it does no harm on your build.
   \item \textbf{Test at operating temperature.} Drift behavior changes
         non-linearly with temperature, and the direction of the effect inverts
         below the stability threshold; validate at the exact temperature used
@@ -1195,9 +1220,9 @@ LLM system designers:
   \item \textbf{Prompt complexity matters.} System prompts only help above a
         task complexity threshold; invest in prompt engineering for complex
         pipelines, not simple ones.
-  \item \textbf{Prompts don't transfer.} Optimal system prompts are specific to
-        the deployed configuration; re-evaluate when changing model, size or
-        quantization format.
+  \item \textbf{Prompts don't transfer.} Within the twenty prompts tested,
+        optimal system prompts were specific to the deployed configuration;
+        re-evaluate when changing model, size or quantization format.
   \item \textbf{Monitor for tipping points.} Catastrophic drift can occur
         suddenly; implement similarity monitoring with early stopping.
   \item \textbf{Use multiple seeds for evaluation.} Single-run evaluations
@@ -1245,6 +1270,16 @@ LLM system designers:
         conditions that separate the formats are the ones that lose chains
         to runaway. The 35B Q4\_K\_M and NVFP4 clean means, in particular,
         should be read as existence results until replicated at higher $n$.
+  \item \textbf{Several prompts are written for the three-step stimulus.}
+        Six of the twenty system prompts (Deterministic Relay, 100\%
+        Fidelity, Numbered-Only Strict, Natural \& Engaging, Zero Fluff and
+        Locked Format) refer to ``three steps'' or prescribe a
+        ``Step~1 \ldots Step~3'' format. They were nonetheless run unchanged
+        on the long recipe, where those instructions contradict the input.
+        Their lasagna rankings therefore measure a prompt that is partly
+        self-contradictory, and the complexity-threshold comparison inherits
+        that confound; the companion paper uses only the domain-neutral
+        prompts when it moves beyond recipes.
   \item \textbf{The lasagna stimulus is compressed.} The 21-step recipe sent
         to the models collapses steps 12--17 into one line
         (Appendix~\ref{app:prompts}); it is a 16-line stimulus that
@@ -1284,7 +1319,7 @@ We presented a systematic study of semantic drift in iterated LLM paraphrase
 chains, combining a cross-family sweep of 17 models with a controlled
 within-family sweep of the Qwen3.5 family, and isolating model architecture,
 scale, quantization level and format, serving infrastructure, temperature and
-prompt engineering. Across 2{,}676 chains and roughly 79{,}000 scored
+prompt engineering. Across 2{,}676 launched chains (2{,}627 completed) and roughly 79{,}000 scored
 inferences we established that:
 
 \begin{enumerate}[leftmargin=*]
@@ -1297,8 +1332,9 @@ inferences we established that:
         4-bit formats applied to identical weights produce measurably different
         drift dynamics.
   \item KV cache precision has non-monotonic, directionally mixed effects.
-  \item Drift is not reducible to sampling entropy, and temperature sensitivity
-        inverts below the stability threshold.
+  \item Drift is not reducible to sampling entropy; below the stability
+        threshold, low temperature raises the runaway-thinking rate rather
+        than changing paraphrase fidelity.
   \item System prompts are effective only above a stimulus complexity
         threshold, and optimal prompts do not transfer across families, sizes,
         or quantization formats.

@@ -564,8 +564,10 @@ Figure~\ref{fig:temperature} extends the temperature ablation to the new
 models with 15 samples at $T=0$. The stable configuration, Qwen3.6-35B, is
 flat within 0.05 across the range on both recipes and both hosts.
 Qwen3.8-27B on spaghetti is U-shaped, 0.718 at $T=0$, falling to 0.582 at
-$T=0.7$ and recovering to 0.747 at $T=1.0$, the same non-monotonic pattern
-Paper~A reported for small Qwen3.5 models. Flash-Next declines with
+$T=0.7$ and recovering to 0.747 at $T=1.0$; unlike the low-temperature
+collapses Paper~A reports for small Qwen3.5 models, which are runaway-thinking
+rates rather than drift, this is a genuine non-monotonicity in a
+thinking-off model with no runaway chains. Flash-Next declines with
 temperature on lasagna (0.918 to 0.792). None of the three models is
 improved by greedy decoding beyond the variance reduction described in
 Section~\ref{sec:seeds}.
