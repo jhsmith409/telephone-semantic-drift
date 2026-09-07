@@ -160,6 +160,14 @@ reachable host; substitute your own endpoints.
 
 MIT — see [LICENSE](LICENSE).
 
+## Zenodo archives
+
+| Record | DOI |
+|---|---|
+| Paper A (preprint) | https://doi.org/10.5281/zenodo.22646929 |
+| Paper B (preprint) | https://doi.org/10.5281/zenodo.22646931 |
+| Dataset and code | https://doi.org/10.5281/zenodo.22646927 |
+
 ## Use of AI assistance
 
 The majority of the code in this repository (experiment runners, analysis scripts,

@@ -11,6 +11,17 @@ authors:
 year: 2026
 license: MIT
 repository-code: "https://github.com/jhsmith409/telephone-semantic-drift"
+doi: 10.5281/zenodo.22646929
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22646929
+    description: "Paper A (preprint, Zenodo)"
+  - type: doi
+    value: 10.5281/zenodo.22646931
+    description: "Paper B (preprint, Zenodo)"
+  - type: doi
+    value: 10.5281/zenodo.22646927
+    description: "Dataset and code archive (Zenodo)"
 references:
   - type: article
     title: "Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains"
@@ -20,4 +31,5 @@ references:
         orcid: "https://orcid.org/0009-0008-0263-1515"
         affiliation: "Joshua.AI LLC"
     year: 2026
+    doi: 10.5281/zenodo.22646931
     notes: "Paper B; source in paper3/, data in release v1.1-data"

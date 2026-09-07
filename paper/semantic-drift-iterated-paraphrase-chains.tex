@@ -659,8 +659,9 @@ servers launched with thinking disabled in the chat template, and across
 their 993 chains the rate is zero; the Ollama and SGLang deployments ran
 Qwen3.5 with its default thinking enabled, and their rates are 15--54\%. The
 contrast is therefore between reasoning on and off, not between serving
-stacks as such: the companion paper shows that a vLLM deployment of the
-following generation with thinking switched on does hit the budget, at a
+stacks as such: the companion paper~\citep{smith2026generations} shows that a vLLM
+deployment of the following generation with thinking switched on does hit
+the budget, at a
 lower rate. A second, uncontrolled difference is the sampler. Our requests
 set only temperature and seed; top-$p$, top-$k$ and repetition or presence
 penalties came from each server's defaults, which differ across the three
@@ -1675,7 +1676,11 @@ The experiment scripts, the analysis code that produces every figure and
 table in this paper, and the raw per-iteration drift records (every chain's
 input and output text) are available at
 \url{https://github.com/jhsmith409/telephone-semantic-drift}; the drift
-records are attached to the repository's \texttt{v1.0-data} release as a
-compressed archive with a published SHA-256 checksum.
+records are attached to the repository's data releases as compressed archives
+with published SHA-256 checksums. The same data, code and paper sources are
+archived at Zenodo: the dataset record has DOI
+\href{https://doi.org/10.5281/zenodo.22646927}{10.5281/zenodo.22646927}, this paper
+\href{https://doi.org/10.5281/zenodo.22646929}{10.5281/zenodo.22646929}, and the companion
+paper~\citep{smith2026generations} \href{https://doi.org/10.5281/zenodo.22646931}{10.5281/zenodo.22646931}.
 
 \end{document}
