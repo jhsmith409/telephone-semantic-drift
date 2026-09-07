@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\caption{Anchor-fact survival by fact type (Qwen3.6-35B NVFP4, both hosts pooled,
+thinking OFF, $n$=30 chains per domain). Each domain prompt carries exactly ten
+tagged anchor facts.}
+\label{tab:paper3-facttype}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Domain & date & id & name & num \\
+\midrule
+api\_reference & 0.07 & 0.96 & --- & 0.95 \\
+building\_code & --- & 0.30 & 1.00 & 0.59 \\
+change\_order & 0.13 & 0.84 & --- & 0.27 \\
+concrete\_sow & --- & 0.92 & --- & 0.77 \\
+construction\_rfi & 0.80 & 0.91 & 0.88 & 0.98 \\
+contract\_clause & --- & --- & 1.00 & 0.85 \\
+discharge\_instructions & 0.17 & --- & 0.98 & 0.65 \\
+financial\_summary & 0.00 & --- & 1.00 & 0.48 \\
+lab\_protocol & --- & --- & --- & 0.30 \\
+literary\_prose & --- & --- & 0.40 & 0.08 \\
+lockout\_tagout & 0.93 & 0.92 & 1.00 & 0.70 \\
+news\_report & --- & 0.33 & 0.71 & 0.71 \\
+python\_code & --- & 0.88 & 0.17 & 0.44 \\
+recipe & --- & --- & --- & 0.72 \\
+scientific\_abstract & --- & 1.00 & --- & 0.62 \\
+travel\_itinerary & --- & 0.99 & 0.84 & 0.89 \\
+\midrule
+\textbf{All domains} & 0.35 & 0.81 & 0.80 & 0.63 \\
+\bottomrule
+\end{tabular}}
+\end{table}

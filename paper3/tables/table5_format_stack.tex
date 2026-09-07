@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{Serving format and stack. Same weights family, two quantisation formats and
+two inference stacks (NVFP4 on vLLM/SGLang vs GGUF Q4\_K\_XL on llama.cpp).
+Qwen3.8-Flash-Next has no GGUF run and is omitted.}
+\label{tab:paper3-format}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrr}
+\toprule
+Model & Recipe & NVFP4 mean [CI] & $n$ & GGUF mean [CI] & $n$ & $\Delta$ & MWU $p$ \\
+\midrule
+Qwen3.6-35B & spaghetti & 0.736 [0.703, 0.763] & 30 & 0.576 [0.471, 0.670] & 15 & 0.160 & $<$0.0001 \\
+Qwen3.6-35B & lasagna & 0.896 [0.878, 0.911] & 30 & 0.847 [0.810, 0.876] & 15 & 0.049 & 0.0058 \\
+Qwen3.8-27B & spaghetti & 0.582 [0.457, 0.693] & 15 & 0.594 [0.481, 0.696] & 15 & -0.013 & 0.9339 \\
+Qwen3.8-27B & lasagna & 0.905 [0.891, 0.919] & 15 & 0.878 [0.864, 0.892] & 15 & 0.027 & 0.0161 \\
+\bottomrule
+\end{tabular}}
+\end{table}

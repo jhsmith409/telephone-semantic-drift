@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\caption{Breadth experiment, 16 knowledge domains, 30 iterations. The first block is
+Qwen3.6-35B NVFP4 with both hosts pooled and thinking OFF; THINK is thinking ON,
+FIDELITY is the domain-neutral Ultra-Constrained Fidelity system prompt, and Flash
+is Qwen3.8-Flash-Next NVFP4. Anchors = fraction of the 10 anchor facts surviving
+verbatim in the final output.}
+\label{tab:paper3-breadth}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrlrrrrrrr}
+\toprule
+Domain & $n$ & Sim & 95\% CI & Anchors & Infl. & Meta & Locked & THINK & FIDELITY & Flash \\
+\midrule
+discharge\_instructions & 30 & 0.862 & [0.846, 0.877] & 0.67 & 1.14 & 0.70 & 0.83 & 0.826 & 0.949 & 0.823 \\
+construction\_rfi & 30 & 0.838 & [0.814, 0.860] & 0.91 & 1.34 & 0.93 & 0.83 & 0.798 & 0.980 & 0.829 \\
+contract\_clause & 30 & 0.836 & [0.825, 0.847] & 0.93 & 1.30 & 0.93 & 0.90 & 0.812 & 0.977 & 0.752 \\
+building\_code & 30 & 0.826 & [0.810, 0.842] & 0.60 & 1.22 & 0.87 & 0.83 & 0.790 & 0.973 & 0.737 \\
+python\_code & 30 & 0.823 & [0.813, 0.833] & 0.68 & 1.86 & 0.87 & 0.80 & 0.835 & 0.943 & 0.817 \\
+lockout\_tagout & 30 & 0.808 & [0.795, 0.821] & 0.87 & 1.27 & 0.77 & 0.83 & 0.798 & 0.882 & 0.805 \\
+lab\_protocol & 30 & 0.807 & [0.792, 0.822] & 0.30 & 1.62 & 0.70 & 0.57 & 0.792 & 0.905 & 0.792 \\
+travel\_itinerary & 30 & 0.804 & [0.781, 0.827] & 0.92 & 1.58 & 0.93 & 0.73 & 0.758 & 0.970 & 0.736 \\
+recipe & 30 & 0.797 & [0.779, 0.814] & 0.72 & 1.53 & 0.80 & 0.70 & 0.642 & 0.920 & 0.783 \\
+concrete\_sow & 30 & 0.780 & [0.756, 0.804] & 0.80 & 1.65 & 0.83 & 0.83 & 0.796 & 0.958 & 0.802 \\
+change\_order & 30 & 0.774 & [0.756, 0.792] & 0.43 & 1.20 & 0.90 & 0.67 & 0.809 & 0.968 & 0.759 \\
+news\_report & 30 & 0.767 & [0.749, 0.786] & 0.67 & 1.27 & 0.80 & 0.93 & 0.802 & 0.976 & 0.751 \\
+financial\_summary & 30 & 0.746 & [0.721, 0.767] & 0.49 & 1.43 & 0.83 & 0.60 & 0.799 & 0.951 & 0.719 \\
+scientific\_abstract & 30 & 0.742 & [0.721, 0.763] & 0.66 & 1.39 & 0.83 & 0.83 & 0.799 & 0.975 & 0.705 \\
+api\_reference & 30 & 0.737 & [0.704, 0.774] & 0.87 & 1.61 & 0.87 & 0.80 & 0.788 & 0.928 & 0.647 \\
+literary\_prose & 30 & 0.716 & [0.684, 0.748] & 0.33 & 1.30 & 0.97 & 0.53 & 0.512 & 0.941 & 0.598 \\
+\bottomrule
+\end{tabular}}
+\end{table}

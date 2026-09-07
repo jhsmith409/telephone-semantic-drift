@@ -1,0 +1,42 @@
+\begin{table}[t]
+\centering
+\caption{Thinking mode. Upper block: final similarity with thinking OFF and ON
+(mean with $n$ chains), the ON$-$OFF difference, Mann--Whitney $p$, and the mean
+reasoning tokens per iteration. ``rep'' = reasoning token counts reported by the
+server; ``est'' = completion tokens minus output tokens (4 characters per token).
+Lower block: 100-iteration runs, similarity at iteration 30 and 100 and the fraction
+of chains dipping more than 0.05 below their iteration-30 value.}
+\label{tab:paper3-thinking}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrl}
+\toprule
+Configuration & Recipe & OFF ($n$) & ON ($n$) & $\Delta$ & $p$ & Reas.\ tok/iter & Source \\
+\midrule
+Qwen3.6-35B NVFP4 (host A) & spaghetti & 0.749 (15) & 0.658 (15) & -0.091 & 0.0028 & 1420 & estimated \\
+Qwen3.6-35B NVFP4 (host A) & lasagna & 0.904 (15) & 0.750 (15) & -0.154 & $<$0.0001 & 3095 & estimated \\
+Qwen3.6-35B NVFP4 (host B) & spaghetti & 0.723 (15) & 0.625 (15) & -0.097 & 0.0003 & 1466 & estimated \\
+Qwen3.6-35B NVFP4 (host B) & lasagna & 0.887 (15) & 0.726 (15) & -0.160 & $<$0.0001 & 2975 & estimated \\
+Qwen3.8-27B NVFP4 & spaghetti & 0.582 (15) & 0.883 (15) & 0.302 & $<$0.0001 & 110 & estimated/reported \\
+Qwen3.8-27B NVFP4 & lasagna & 0.905 (15) & 0.932 (15) & 0.026 & 0.0062 & 436 & estimated/reported \\
+Qwen3.8-Flash-Next NVFP4 & spaghetti & 0.731 (15) & 0.873 (15) & 0.141 & $<$0.0001 & 95 & estimated \\
+Qwen3.8-Flash-Next NVFP4 & lasagna & 0.876 (15) & 0.939 (15) & 0.063 & $<$0.0001 & 306 & estimated \\
+\bottomrule
+\end{tabular}}
+
+\vspace{1em}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllrrrrr}
+\toprule
+Configuration & Recipe & Think & $n$ & @30 & @100 & $\Delta_{30\to100}$ & dip rate \\
+\midrule
+Qwen3.6-35B NVFP4 (host B) & spaghetti & OFF & 15 & 0.759 & 0.751 & -0.008 & 0.07 \\
+Qwen3.6-35B NVFP4 (host B) & spaghetti & ON & 15 & 0.727 & 0.655 & -0.072 & 0.73 \\
+Qwen3.6-35B NVFP4 (host B) & lasagna & OFF & 15 & 0.915 & 0.910 & -0.005 & 0.13 \\
+Qwen3.6-35B NVFP4 (host B) & lasagna & ON & 15 & 0.767 & 0.712 & -0.056 & 1.00 \\
+Qwen3.8-27B NVFP4 & spaghetti & ON & 5 & 0.895 & 0.870 & -0.025 & 0.40 \\
+Qwen3.8-27B NVFP4 & lasagna & ON & 5 & 0.938 & 0.894 & -0.043 & 0.60 \\
+Qwen3.8-Flash-Next NVFP4 & spaghetti & ON & 5 & 0.861 & 0.869 & 0.008 & 0.00 \\
+Qwen3.8-Flash-Next NVFP4 & lasagna & ON & 5 & 0.957 & 0.936 & -0.021 & 0.20 \\
+\bottomrule
+\end{tabular}}
+\end{table}

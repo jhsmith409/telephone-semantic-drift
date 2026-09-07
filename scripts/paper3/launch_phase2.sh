@@ -79,7 +79,7 @@ echo "gpu-host-b    phase1 PIDs to wait on: ${P1PIDS:-<none>}"
 nohup bash -c "
   echo \"[\$(date -u +%FT%TZ)] waiting for the Phase 1 gpu-host-b queue (PIDs: ${P1PIDS:-none}) ...\"
   while true; do
-    if tail -3 '$RES/gpu_host_b_phase1.log' | grep -q '^Done:'; then
+    if tail -3 '$RES/gpu-host-b_phase1.log' | grep -q '^Done:'; then
       echo \"[\$(date -u +%FT%TZ)] phase1 log reports Done\"; break
     fi
     alive=0
@@ -96,5 +96,5 @@ nohup bash -c "
   $RUN --label qwen3.6-35b-q4kxl     --exp baseline --seeds $ALL --workers 1
   $RUN --label qwen3.6-27b-q4kxl     --exp baseline --seeds $ALL --workers 1
   echo 'PHASE2 GPU_HOST_B QUEUE COMPLETE'
-" > "$RES/gpu_host_b_phase2.log" 2>&1 &
-echo "gpu-host-b    (serial, 1 worker)         PID $!  log $RES/gpu_host_b_phase2.log"
+" > "$RES/gpu-host-b_phase2.log" 2>&1 &
+echo "gpu-host-b    (serial, 1 worker)         PID $!  log $RES/gpu-host-b_phase2.log"

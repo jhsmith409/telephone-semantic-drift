@@ -11,6 +11,7 @@ __pycache__/
 results/*
 !results/README.md
 !results/paper_figures/
+!results/paper3_figures/
 !results/qwen35_paper_figures/
 !results/embedding_validation/
 !results/embedding_validation_qwen35/

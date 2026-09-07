@@ -1,0 +1,30 @@
+\begin{table}[t]
+\centering
+\caption{Seed reproducibility. Chains repeated with identical seed, prompt and
+deployment diverge immediately; ``identical at iter.\ 1'' counts pairs whose first
+outputs are byte-identical, and $|\Delta|$ is the absolute difference in final
+similarity. The lower block compares the two Qwen3.6-35B NVFP4 hosts as
+distributions (Mann--Whitney U, $n$=15 per host per recipe).}
+\label{tab:paper3-determinism}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+Comparison & pairs & identical at iter.\ 1 & mean identical iters & mean $|\Delta|$ & max $|\Delta|$ \\
+\midrule
+host A run1 vs run2 & 10 & 0/10 & 0.00 & 0.045 & 0.096 \\
+host A run1 vs host B & 10 & 1/10 & 3.00 & 0.041 & 0.144 \\
+host A workers=1 run a vs run b & 5 & 0/5 & 0.00 & 0.040 & 0.074 \\
+\bottomrule
+\end{tabular}}
+
+\vspace{1em}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Recipe & host A mean ($n$) & host B mean ($n$) & MWU $p$ \\
+\midrule
+spaghetti & 0.749 (15) & 0.723 (15) & 0.6333 \\
+lasagna & 0.904 (15) & 0.887 (15) & 0.3837 \\
+\bottomrule
+\end{tabular}}
+\end{table}
