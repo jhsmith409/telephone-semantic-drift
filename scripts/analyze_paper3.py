@@ -37,6 +37,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "scripts" / "legacy"))
 sys.path.insert(0, str(ROOT / "scripts" / "paper3"))
 
 from paper3.common import PROMPTS, PROMPT_NAMES, _slug  # noqa: E402

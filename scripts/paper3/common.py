@@ -30,7 +30,9 @@ from openai import OpenAI
 # Import prompts / system prompts from the Paper 2 script rather than retyping.
 # (That module guards all of its work behind `if __name__ == "__main__"`, so
 # importing it is side-effect free.)
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_SCRIPTS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_SCRIPTS))
+sys.path.insert(0, str(_SCRIPTS / "legacy"))  # Paper 1/2 run scripts (prompt definitions)
 from run_qwen35_nvfp4_sysprompt import (  # noqa: E402
     PROMPTS,
     PROMPT_NAMES,

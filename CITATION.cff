@@ -10,3 +10,12 @@ authors:
 year: 2026
 license: MIT
 repository-code: "https://github.com/jhsmith409/telephone-semantic-drift"
+references:
+  - type: article
+    title: "Semantic Drift Across Qwen Generations: Reproducibility, Thinking Mode, Serving Stack, and What Cosine Similarity Misses in Iterated Paraphrase Chains"
+    authors:
+      - family-names: Smith
+        given-names: James H.
+        affiliation: "Joshua.AI LLC"
+    year: 2026
+    notes: "Paper B; source in paper3/, data in release v1.1-data"
