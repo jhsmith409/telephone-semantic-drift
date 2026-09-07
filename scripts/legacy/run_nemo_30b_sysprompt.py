@@ -7,7 +7,7 @@ variants, enabling cross-quantization comparison on prompt sensitivity.
 
 20 prompts x 2 recipes x 5 seeds x 30 iters = 6,000 API calls
 
-sglang endpoint: <GPU-HOST-C>:8005 (OpenAI-compatible, separate GPU).
+vLLM endpoint: <GPU-HOST-C>:8005 (OpenAI-compatible, separate GPU).
 
 Usage:
     nohup uv run python -u scripts/run_nemo_30b_sysprompt.py \

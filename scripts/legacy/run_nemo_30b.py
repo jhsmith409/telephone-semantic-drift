@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 James H. Smith. MIT License.
-"""Nemotron-3-Nano-30B NVFP4 experiment on sglang.
+"""Nemotron-3-Nano-30B NVFP4 experiment on vLLM (docstring corrected 2026-09-07; originally said sglang).
 
 Runs Exp 1 (drift baseline) and Exp 2 (temperature ablation) for the
 NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 model, writing results to separate data files.
@@ -8,7 +8,7 @@ NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 model, writing results to separate data fil
 Exp 1: 2 recipes x 5 seeds x 30 iters = 300 API calls
 Exp 2: 5 temps x 2 recipes x 5 seeds x 30 iters = 1,260 API calls (T=0 -> 1 seed)
 
-sglang endpoint: <GPU-HOST-C>:8005 (OpenAI-compatible, separate GPU).
+vLLM endpoint: <GPU-HOST-C>:8005 (OpenAI-compatible, separate GPU).
 Parallelism: 1 worker.
 
 Usage:
