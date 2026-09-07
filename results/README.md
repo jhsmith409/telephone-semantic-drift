@@ -6,8 +6,8 @@ Only the small, published artefacts are committed here:
 
 | Path | Contents |
 | --- | --- |
-| `paper_figures/` | Figures for Paper A (`paper/main.tex`) |
-| `paper3_figures/` | Figures for Paper B (`paper3/main.tex`), plus `all_stats.json` (every statistic quoted in the paper) and `summary_for_text.md` |
+| `paper_figures/` | Figures for Paper A (`paper/semantic-drift-iterated-paraphrase-chains.tex`) |
+| `paper3_figures/` | Figures for Paper B (`paper3/semantic-drift-across-qwen-generations.tex`), plus `all_stats.json` (every statistic quoted in the paper) and `summary_for_text.md` |
 | `qwen35_paper_figures/` | Figures for the Qwen3.5 paper (`paper2/main.tex`) |
 | `embedding_validation/` | bge-m3 vs. Qwen3-Embedding agreement check for Papers 1: `correlation_stats.json`, `raw_similarities.json`, `embedding_scatter.png` |
 | `embedding_validation_qwen35/` | The same validation for the Qwen3.5 data |
