@@ -344,7 +344,7 @@ hardware, software versions and the compute budget.
   \item \textbf{9B dense AWQ, vLLM} --- drift baseline (10 conditions),
         temperature ablation (42 conditions), system prompt ablation
         (200 conditions).
-  \item \textbf{Nemotron-3-Nano-30B NVFP4, SGLang (out-of-family control)} ---
+  \item \textbf{Nemotron-3-Nano-30B NVFP4, vLLM (out-of-family control)} ---
         drift baseline (10 conditions), temperature ablation (42 conditions),
         system prompt ablation (200 conditions).
   \item \textbf{System prompt ablation, Ollama} (Section~\ref{sec:rq3}):
@@ -637,9 +637,8 @@ system prompts, so this section concentrates on the empty-completion mode.
 Across the 1{,}969 completed within-family chains, 265 (13.5\%, Wilson 95\%
 CI [12.0\%, 15.0\%]) are runaway. The rate is governed first by the serving
 stack: it is zero across all 993 chains served by vLLM (35B AWQ, 35B GPTQ-Int4,
-9B AWQ; 743 chains) or by SGLang for the Nemotron control (250 chains), and
-15--54\% on
-the Ollama GGUF and SGLang NVFP4 arms. Within the Ollama sweep it then
+9B AWQ and the Nemotron NVFP4 control), and 15--54\% on the Ollama GGUF and
+SGLang NVFP4 arms. Within the Ollama sweep it then
 follows size and precision (Table~\ref{tab:runaway}): both 0.8B builds fail
 in 80--100\% of chains on either recipe; the 2B builds fail in 20--80\%; and
 above 4B only the Q4\_K\_M builds fail, at 40\% (27B) and 50\% (35B MoE) on
@@ -1426,15 +1425,17 @@ together with the out-of-family control. All GGUF models were served with
 Ollama. The vLLM models were
 \texttt{cyankiwi/\allowbreak Qwen3.5-35B-A3B-AWQ-4bit} (AWQ 4-bit),
 \texttt{Qwen/\allowbreak Qwen3.5-35B-A3B-GPTQ-Int4} (GPTQ-Int4) and
-\texttt{cyankiwi/\allowbreak Qwen3.5-9B-AWQ-4bit} (9B AWQ). The SGLang models were
-\texttt{txn545/\allowbreak Qwen3.5-35B-A3B-NVFP4} and, as the out-of-family control,
+\texttt{cyankiwi/\allowbreak Qwen3.5-9B-AWQ-4bit} (9B AWQ) and, as the out-of-family
+control,
 \texttt{nvidia/\allowbreak NVIDIA-\allowbreak Nemotron-\allowbreak 3-Nano-\allowbreak 30B-A3B-\allowbreak NVFP4}.
+The SGLang model was \texttt{txn545/\allowbreak Qwen3.5-35B-A3B-NVFP4}.
 
 \begin{table}[h]
 \centering
 \caption{Within-family (Qwen3.5) model inventory. GGUF models were served with
-  Ollama; the AWQ and GPTQ-Int4 variants with vLLM; the NVFP4 variants with
-  SGLang. The Nemotron-3-Nano-30B row is an out-of-family control, included to
+  Ollama; the AWQ and GPTQ-Int4 variants and the Nemotron control with vLLM;
+  the Qwen3.5 NVFP4 variant with SGLang. The Nemotron-3-Nano-30B row is an
+  out-of-family control, included to
   test whether the system prompt rankings of Section~\ref{sec:rq3} are specific
   to the Qwen3.5 family. See Appendix~\ref{app:compute} for hardware and
   software versions.}
@@ -1457,7 +1458,7 @@ Size & Architecture & Quantizations & Backend \\
 122B & MoE & Q4\_K\_M & Ollama \\
 \midrule
 \multicolumn{4}{l}{\emph{Out-of-family control}} \\
-30B & MoE (A3B) & NVFP4 4-bit & SGLang \\
+30B & MoE (A3B) & NVFP4 4-bit & vLLM \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1556,9 +1557,10 @@ unlikely to meaningfully affect the correlation.
 
 \paragraph{Hardware.}
 All Ollama and vLLM runs were executed on a single on-premises server with
-one NVIDIA RTX~PRO~6000 Blackwell GPU (96\,GB). The SGLang NVFP4 runs
-(35B NVFP4 and the Nemotron control) were executed on a second on-premises
-server with one NVIDIA RTX~5090 GPU (32\,GB). Embeddings were computed with
+one NVIDIA RTX~PRO~6000 Blackwell GPU (96\,GB), except that the two NVFP4
+models---the 35B NVFP4 build on SGLang and the Nemotron control on vLLM---were
+executed on a second on-premises server with one NVIDIA RTX~5090 GPU
+(32\,GB). Embeddings were computed with
 Qwen3-Embedding-0.6B served by vLLM on a dedicated NVIDIA RTX~5070~Ti GPU
 (16\,GB). The validation embeddings used bge-m3: for the cross-family dataset
 served by Ollama on the RTX~PRO~6000, and for the within-family dataset served
@@ -1566,7 +1568,8 @@ by vLLM on an RTX~5070~Ti.
 
 \paragraph{Software.}
 Ollama v0.16.3; vLLM v0.15.1, plus a CUDA~13.0 nightly build of vLLM for the
-GPTQ-Int4 and 9B~AWQ runs; SGLang for the NVFP4 runs. Analysis used Python
+GPTQ-Int4, 9B~AWQ and Nemotron NVFP4 runs; SGLang v0.5.9 for the Qwen3.5
+35B NVFP4 runs. Analysis used Python
 with NumPy, SciPy and Matplotlib, driven by
 \texttt{scripts/\allowbreak analyze\_paper.py} and
 \texttt{scripts/\allowbreak analyze\_qwen35\_paper.py}, which regenerate every
