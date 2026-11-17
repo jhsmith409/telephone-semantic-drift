@@ -26,3 +26,6 @@ results/*
 *.out
 *.synctex.gz
 *.toc
+
+# Local assistant notes — never commit
+CLAUDE.md
